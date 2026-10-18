@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+# The original camera/raw videos are large (tele/tele1.mp4 alone is 85 MB — GitHub warns above 50 MB).
+# The site only references the web-optimized copies in assets/videos_web/, so you can
+# uncomment the next line to keep the originals out of the repository:
+# */*.mp4

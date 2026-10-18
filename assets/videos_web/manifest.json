@@ -1,0 +1,123 @@
+{
+  "physgrasp-v4": {
+    "src": "Advance_wiley/v4.mp4",
+    "file": "assets/videos_web/physgrasp-v4.mp4",
+    "poster": "assets/posters/physgrasp-v4.jpg",
+    "width": 480,
+    "height": 360,
+    "duration": 57.8,
+    "size_mb": 2.0,
+    "audio": false,
+    "mode": "remux"
+  },
+  "physgrasp-v6": {
+    "src": "Advance_wiley/v6 .mp4",
+    "file": "assets/videos_web/physgrasp-v6.mp4",
+    "poster": "assets/posters/physgrasp-v6.jpg",
+    "width": 720,
+    "height": 480,
+    "duration": 24.07,
+    "size_mb": 1.59,
+    "audio": true,
+    "mode": "remux"
+  },
+  "tactile-grasp-abb-manipulation": {
+    "src": "icra25/abb_manipulation.mp4",
+    "file": "assets/videos_web/tactile-grasp-abb-manipulation.mp4",
+    "poster": "assets/posters/tactile-grasp-abb-manipulation.jpg",
+    "width": 720,
+    "height": 480,
+    "duration": 28.56,
+    "size_mb": 2.17,
+    "audio": true,
+    "mode": "remux"
+  },
+  "tactile-grasp-v5": {
+    "src": "icra25/v5.mp4",
+    "file": "assets/videos_web/tactile-grasp-v5.mp4",
+    "poster": "assets/posters/tactile-grasp-v5.jpg",
+    "width": 1260,
+    "height": 720,
+    "duration": 19.17,
+    "size_mb": 0.91,
+    "audio": true,
+    "mode": "remux"
+  },
+  "uniprototype-v3subiros": {
+    "src": "iros26/v3subiros.mp4",
+    "file": "assets/videos_web/uniprototype-v3subiros.mp4",
+    "poster": "assets/posters/uniprototype-v3subiros.jpg",
+    "width": 1280,
+    "height": 680,
+    "duration": 60.0,
+    "size_mb": 1.51,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "pixelpoint-rl-icra27": {
+    "src": "pixel_RL/ICRA27.mp4",
+    "file": "assets/videos_web/pixelpoint-rl-icra27.mp4",
+    "poster": "assets/posters/pixelpoint-rl-icra27.jpg",
+    "width": 810,
+    "height": 480,
+    "duration": 166.03,
+    "size_mb": 9.64,
+    "audio": false,
+    "mode": "remux"
+  },
+  "teleop-tele1": {
+    "src": "tele/tele1.mp4",
+    "file": "assets/videos_web/teleop-tele1.mp4",
+    "poster": "assets/posters/teleop-tele1.jpg",
+    "width": 720,
+    "height": 1280,
+    "duration": 68.93,
+    "size_mb": 2.66,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "teleop-tele2": {
+    "src": "tele/tele2.mp4",
+    "file": "assets/videos_web/teleop-tele2.mp4",
+    "poster": "assets/posters/teleop-tele2.jpg",
+    "width": 720,
+    "height": 1280,
+    "duration": 29.03,
+    "size_mb": 1.45,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "teleop-tele3": {
+    "src": "tele/tele3.mp4",
+    "file": "assets/videos_web/teleop-tele3.mp4",
+    "poster": "assets/posters/teleop-tele3.jpg",
+    "width": 720,
+    "height": 1280,
+    "duration": 7.01,
+    "size_mb": 0.22,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "cloth-unfold-corlv7": {
+    "src": "unfold/corlv7.mp4",
+    "file": "assets/videos_web/cloth-unfold-corlv7.mp4",
+    "poster": "assets/posters/cloth-unfold-corlv7.jpg",
+    "width": 640,
+    "height": 480,
+    "duration": 177.1,
+    "size_mb": 7.74,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "object-spin-icra27-6150-vi-i": {
+    "src": "wrench_spin/ICRA27_6150_VI_i.mp4",
+    "file": "assets/videos_web/object-spin-icra27-6150-vi-i.mp4",
+    "poster": "assets/posters/object-spin-icra27-6150-vi-i.jpg",
+    "width": 1280,
+    "height": 720,
+    "duration": 172.5,
+    "size_mb": 2.61,
+    "audio": false,
+    "mode": "reencode"
+  }
+}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Research Highlights</title>
+  <meta name="description" content="Slide-deck research showcase: papers and demo videos on robot grasping, dexterous in-hand manipulation, real-world reinforcement learning, cloth unfolding, human-to-robot skill transfer and teleoperation.">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Research Highlights — Learning Contact-Rich Robot Manipulation">
+  <meta property="og:description" content="Papers and demo videos on grasping, dexterous manipulation, real-world RL and human-to-robot skill transfer.">
+  <meta property="og:image" content="assets/posters/object-spin-icra27-6150-vi-i.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232457d6'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M25 19v26l22-13z' fill='white'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <!-- Slides are generated from assets/data/papers.js into #track -->
+  <main class="viewport" id="viewport" aria-roledescription="slideshow" aria-label="Research highlights">
+    <div class="track" id="track" style="--i:0">
+      <noscript><p style="padding:2rem">This presentation renders with JavaScript. Please enable it, or browse the PDFs in the repository.</p></noscript>
+    </div>
+  </main>
+
+  <div class="hud" id="hud">
+    <div class="hud-brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      <span>Research Highlights</span>
+    </div>
+    <div class="dots" id="dots" aria-label="Slides"></div>
+    <div class="hud-controls">
+      <button class="hud-btn" id="prev" type="button" aria-label="Previous slide (←)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="counter" aria-live="polite"><span id="current">1</span> / <span id="total">1</span></span>
+      <button class="hud-btn" id="next" type="button" aria-label="Next slide (→)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="hud-btn" id="fs" type="button" aria-label="Toggle fullscreen (F)">
+        <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      </button>
+      <button class="hud-btn" id="help-btn" type="button" aria-label="Keyboard shortcuts (?)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <dialog id="info-dialog" aria-labelledby="info-title">
+    <div class="dlg">
+      <div class="dlg-head">
+        <div><h3 id="info-title">Abstract</h3><p id="info-sub"></p></div>
+        <button class="icon-btn" type="button" aria-label="Close" data-close-dialog>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="dlg-body" id="info-body"></div>
+      <div class="dlg-foot"><button class="btn" type="button" data-close-dialog>Close</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="bibtex-dialog" aria-labelledby="bibtex-title">
+    <div class="dlg">
+      <div class="dlg-head">
+        <div><h3 id="bibtex-title">BibTeX</h3><p>Copy the entry below into your .bib file.</p></div>
+        <button class="icon-btn" type="button" aria-label="Close" data-close-dialog>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="dlg-body"><pre id="bibtex-text" tabindex="0"></pre></div>
+      <div class="dlg-foot">
+        <button class="btn" type="button" data-close-dialog>Close</button>
+        <button class="btn btn-dark" type="button" data-copy-bibtex>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span>Copy BibTeX</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dlg">
+      <div class="dlg-head">
+        <div><h3 id="help-title">Presenting</h3><p>Works with a presentation clicker, keyboard, mouse wheel or touch swipe.</p></div>
+        <button class="icon-btn" type="button" aria-label="Close" data-close-dialog>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="dlg-body">
+        <ul class="shortcuts">
+          <li><span>Next slide</span><span><kbd>→</kbd><kbd>↓</kbd><kbd>Space</kbd><kbd>PgDn</kbd></span></li>
+          <li><span>Previous slide</span><span><kbd>←</kbd><kbd>↑</kbd><kbd>PgUp</kbd></span></li>
+          <li><span>First / last slide</span><span><kbd>Home</kbd><kbd>End</kbd></span></li>
+          <li><span>Jump to paper n</span><span><kbd>1</kbd>…<kbd>9</kbd></span></li>
+          <li><span>Overview</span><span><kbd>O</kbd></span></li>
+          <li><span>Fullscreen</span><span><kbd>F</kbd></span></li>
+          <li><span>Abstract of this paper</span><span><kbd>A</kbd></span></li>
+          <li><span>BibTeX of this paper</span><span><kbd>B</kbd></span></li>
+          <li><span>Play / pause the main video</span><span><kbd>V</kbd></span></li>
+          <li><span>Close a dialog</span><span><kbd>Esc</kbd></span></li>
+        </ul>
+        <h4>Export</h4>
+        <p>File → Print → “Save as PDF” prints one slide per page.</p>
+      </div>
+      <div class="dlg-foot"><button class="btn btn-dark" type="button" data-close-dialog>Got it</button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/data/papers.js"></script>
+  <script src="assets/js/main.js" defer></script>
+</body>
+</html>
