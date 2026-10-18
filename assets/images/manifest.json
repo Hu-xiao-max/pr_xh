@@ -1,0 +1,68 @@
+{
+  "physgrasp": [
+    {
+      "src": "assets/images/physgrasp-interaction.jpg",
+      "w": 1218,
+      "h": 478,
+      "from": "Advance_wiley/interaction.png"
+    }
+  ],
+  "tactile-grasp": [
+    {
+      "src": "assets/images/tactile-grasp-ex2.jpg",
+      "w": 484,
+      "h": 137,
+      "from": "icra25/ex2.png"
+    },
+    {
+      "src": "assets/images/tactile-grasp-grasp-interaction.jpg",
+      "w": 762,
+      "h": 1016,
+      "from": "icra25/grasp_interaction.png"
+    }
+  ],
+  "uniprototype": [
+    {
+      "src": "assets/images/uniprototype-pipeline2.jpg",
+      "w": 1600,
+      "h": 869,
+      "from": "iros26/pipeline2.png"
+    }
+  ],
+  "pixelpoint-rl": [
+    {
+      "src": "assets/images/pixelpoint-rl-figurerewirte.jpg",
+      "w": 780,
+      "h": 637,
+      "from": "pixel_RL/figurerewirte.png"
+    },
+    {
+      "src": "assets/images/pixelpoint-rl-towel-track.jpg",
+      "w": 1472,
+      "h": 1260,
+      "from": "pixel_RL/towel_track.png"
+    }
+  ],
+  "cloth-unfold": [
+    {
+      "src": "assets/images/cloth-unfold-selected-record-metrics.jpg",
+      "w": 1240,
+      "h": 662,
+      "from": "unfold/selected_record_20260604_135237_metrics.png"
+    }
+  ],
+  "object-spin": [
+    {
+      "src": "assets/images/object-spin-overview.jpg",
+      "w": 1600,
+      "h": 527,
+      "from": "wrench_spin/overview.png"
+    },
+    {
+      "src": "assets/images/object-spin-wrench-pipeline.jpg",
+      "w": 841,
+      "h": 776,
+      "from": "wrench_spin/wrench_pipeline.png"
+    }
+  ]
+}

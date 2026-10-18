@@ -4,7 +4,7 @@
    Slides: cover (with the table of contents) → one slide per paper → closing.
    • Navigation: ← → ↑ ↓ Space PgUp PgDn Home End, mouse wheel, touch swipe,
      on-screen arrows, dots, Home button (Home / H), 1-9 jump to paper n, F fullscreen,
-     A abstract of the current paper, B its BibTeX, G its figures enlarged, V play/pause its main video, ? help.
+     A abstract of the current paper, B its BibTeX, G its images enlarged, V play/pause its first video, ? help.
    • URL hash (#/paper-id) deep-links to a slide.
    • Videos: created with preload="none" and no src. An IntersectionObserver
      attaches src/poster when a slide is next to the current one, autoplays
@@ -41,6 +41,7 @@
     code: svg('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
     link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
     play: svg('<path d="M8 5v14l11-7z"/>', true),
+    expand: svg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>'),
     sound: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'),
     mute: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
   };
@@ -92,9 +93,10 @@
     return '<p>' + names + '</p>' + (affils ? '<p class="affils">' + affils + '</p>' : '');
   }
 
-  // One <video> in a ratio-locked frame. `caption` is trusted HTML from papers.js.
-  function videoHTML(v, opts) {
-    opts = opts || {};
+  const stripTags = (s) => String(s || '').replace(/<[^>]*>/g, '');
+
+  // One <video> in a frame (no caption on the slide; the caption becomes a tooltip).
+  function videoFrameHTML(v) {
     const w = v.w || 16, h = v.h || 9;
     const isLoop = v.kind !== 'overview';
     const attrs = [
@@ -112,40 +114,86 @@
       v.label ? '<span class="vlabel">' + esc(v.label) + '</span>' : '',
       v.duration ? '<span class="vbadge">' + fmtDuration(v.duration) + '</span>' : '',
       (isLoop && v.audio) ? '<button class="vsound" type="button" aria-label="Unmute" data-sound>' + ICONS.mute + '</button>' : '',
+      isLoop ? '<button class="vexpand" type="button" aria-label="Enlarge video" data-expand>' + ICONS.expand + '</button>' : '',
       '<button class="vplay" type="button" aria-label="Play video" data-play>' + ICONS.play + '</button>',
     ].join('');
-    return '<figure class="vfig' + (opts.main ? ' vfig-main' : '') + '">' +
-      '<div class="vframe" style="aspect-ratio:' + w + ' / ' + h + ';--ar:' + (w / h).toFixed(4) + '">' +
-      '<video ' + attrs + '></video>' + overlays + '</div>' +
-      (v.caption ? '<figcaption>' + v.caption + '</figcaption>' : '') +
-      '</figure>';
+    return '<div class="vframe" style="--ar:' + (w / h).toFixed(4) + '" title="' + esc(stripTags(v.caption)) + '">' +
+      '<video ' + attrs + '></video>' + overlays + '</div>';
   }
 
-  function mediaHTML(p, opts) {
-    opts = opts || {};
-    const m = p.media || {};
-    const clips = m.clips || [];
-    if (m.main) return '<div class="media-main">' + videoHTML(m.main, { main: true }) + '</div>';
-    if (!clips.length) return '<div class="media-empty">No video yet</div>';
-    const n = clips.length;
-    const portrait = clips.every((c) => (c.h || 0) > (c.w || 0));
-    let cols, rows;
-    if (opts.compact || portrait) { cols = Math.min(n, 3); rows = Math.ceil(n / cols); }   // side by side under the figures
-    else if (n === 1) { cols = 1; rows = 1; }
-    else if (n === 2) { cols = 1; rows = 2; }
-    else { cols = 2; rows = Math.ceil(n / 2); }
-    return '<div class="vgrid" style="--cols:' + cols + ';--rows:' + rows + '">' + clips.map((c) => videoHTML(c)).join('') + '</div>';
+  // ----- where each image / video goes -----
+  const SMALL_IMG = 600;   // without an explicit layout, images this small (long side, px) sit beside the bullets
+  const videoList = (p) => { const m = p.media || {}; return (m.main ? [m.main] : []).concat(m.clips || []); };
+  const galleryItems = (p) => (p.gallery || []).map((g, i) => ({ kind: 'img', g: g, i: i, ar: (g.w || 16) / (g.h || 9) })).filter((it) => it.g && it.g.src);
+  const videoItems = (p) => videoList(p).map((v, i) => ({ kind: 'video', v: v, i: i, ar: (v.w || 16) / (v.h || 9) }));
+  function resolveItem(p, key) {
+    const parts = String(key).split(':'), i = +parts[1] || 0;
+    if (parts[0] === 'img') return galleryItems(p).find((it) => it.i === i) || null;
+    if (parts[0] === 'video') return videoItems(p).find((it) => it.i === i) || null;
+    return null;
+  }
+  // -> { text: items under the bullets, board: items for the automatic board (null when the layout is explicit) }
+  function placement(p) {
+    const L = p.layout || {};
+    const text = (L.text || []).map((k) => resolveItem(p, k)).filter(Boolean);
+    const used = (it) => text.some((t) => t.kind === it.kind && t.i === it.i);
+    if (L.board && L.board.cells) return { text: text, board: null };
+    const imgs = galleryItems(p).filter((it) => !used(it));
+    const small = L.text ? [] : imgs.filter((it) => it.g.place === 'text' || (it.g.place !== 'board' && Math.max(it.g.w || 0, it.g.h || 0) <= SMALL_IMG));
+    const board = imgs.filter((it) => small.indexOf(it) < 0).concat(videoItems(p).filter((it) => !used(it)));
+    return { text: text.concat(small), board: board };
+  }
+  function inlineImgHTML(p, it) {
+    const g = it.g;
+    const cls = 'inline-img ' + (it.ar >= 2 ? 'inline-wide' : 'inline-float');
+    return '<button type="button" class="' + cls + '" style="aspect-ratio:' + (g.w || 16) + ' / ' + (g.h || 9) + ';--ar:' + it.ar.toFixed(4) + '" data-gallery="' + esc(p.id) + '" data-gallery-index="' + it.i + '" aria-label="Enlarge image ' + (it.i + 1) + '">' +
+      '<img src="' + esc(g.src) + '" alt="" decoding="async"></button>';
+  }
+  function cellHTML(p, it, style) {
+    const st = ' style="--ar:' + it.ar.toFixed(4) + (style ? '; ' + style : '') + '"';
+    const shape = it.ar < 0.9 ? ' cell-tall' : (it.ar >= 1.9 ? ' cell-wide' : '');
+    if (it.kind === 'img') {
+      return '<button type="button" class="cell cell-img' + shape + '"' + st + ' data-gallery="' + esc(p.id) + '" data-gallery-index="' + it.i + '" aria-label="Enlarge image ' + (it.i + 1) + '">' +
+        '<img src="' + esc(it.g.src) + '" alt="" decoding="async"></button>';
+    }
+    return '<div class="cell cell-video' + shape + '"' + st + '>' + videoFrameHTML(it.v) + '</div>';
   }
 
-  // Figure 1 + Figure 2 as an overlapping pair (no captions). Click = enlarge.
-  function figuresHTML(p) {
-    const figs = (p.figures || []).filter((f) => f && f.src).slice(0, 2);
-    if (!figs.length) return '';
-    return '<div class="figs figs-' + figs.length + '" role="group" aria-label="Figures">' + figs.map((f, i) => {
-      const w = f.w || 16, h = f.h || 9;
-      return '<button type="button" class="fig fig-' + (i + 1) + '" style="aspect-ratio:' + w + ' / ' + h + ';--ar:' + (w / h).toFixed(4) + '" data-fig="' + esc(p.id) + '" data-fig-index="' + i + '" aria-label="Enlarge figure ' + (i + 1) + '">' +
-        '<img src="' + esc(f.src) + '" alt="" decoding="async"></button>';
-    }).join('') + '</div>';
+  // The visual board. With `layout.board` the grid is exactly as specified; otherwise it is composed
+  // automatically (images first, then videos) so that every image keeps a legible size.
+  function boardHTML(p) {
+    const L = (p.layout || {}).board;
+    if (L && L.cells) {
+      const cells = L.cells.map((c) => {
+        const it = resolveItem(p, c.item);
+        if (!it) return '';
+        const st = [c.span ? 'grid-column: span ' + c.span : '', c.rowSpan ? 'grid-row: span ' + c.rowSpan : ''].filter(Boolean).join('; ');
+        return cellHTML(p, it, st);
+      }).join('');
+      const track = (v) => (typeof v === 'number' ? 'repeat(' + v + ', minmax(0, 1fr))' : (v || 'minmax(0, 1fr)'));
+      return '<div class="board" data-layout="explicit" style="grid-template-columns: ' + track(L.cols || 1) + '; grid-template-rows: ' + track(L.rows || 1) + '" data-items="' + L.cells.length + '">' + cells + '</div>';
+    }
+    const items = placement(p).board;
+    const n = items.length;
+    if (!n) return '<div class="board board-empty"></div>';
+    let cols, rows, spanCls = '';
+    if (n > 1 && items.every((it) => it.ar < 0.9)) {        // all portrait (phone clips): one row, side by side
+      cols = Math.min(n, 4); rows = Math.ceil(n / cols);
+    } else {
+      cols = n <= 2 ? 1 : n <= 4 ? 2 : n <= 6 ? 3 : 4;
+      const spare = cols > 1 && n % cols === cols - 1;      // one spare cell: let one item take two cells
+      rows = Math.ceil((n + (spare ? 1 : 0)) / cols);
+      if (spare) {
+        const pool = items.filter((it) => it.kind === 'img');
+        const widest = (pool.length ? pool : items).reduce((a, b) => (b.ar > a.ar ? b : a));
+        const tallest = items.reduce((a, b) => (b.ar < a.ar ? b : a));
+        let pick = widest; spanCls = ' span-2';              // wide image across two columns ...
+        if (widest.ar < 1.4 && tallest.ar < 0.9) { pick = tallest; spanCls = ' span-r2'; }   // ... or a portrait one down two rows
+        items.splice(items.indexOf(pick), 1); items.unshift(pick);
+      }
+    }
+    const cells = items.map((it, k) => cellHTML(p, it, k === 0 && spanCls ? (spanCls === ' span-2' ? 'grid-column: span 2' : 'grid-row: span 2') : '')).join('');
+    return '<div class="board" style="--cols:' + cols + ';--rows:' + rows + '" data-items="' + n + '">' + cells + '</div>';
   }
 
   function btnHTML(href, label, icon, cls) {
@@ -158,9 +206,7 @@
       '<button type="button" class="toc-item" data-goto="' + esc(p.id) + '" aria-label="Go to ' + esc(p.shortTitle || p.title) + '">' +
         '<span class="num">' + pad2(i + 1) + '</span>' +
         (thumbOf(p) ? '<img src="' + esc(thumbOf(p)) + '" alt="" decoding="async">' : '<span class="toc-noimg"></span>') +
-        '<span class="toc-text"><span class="toc-title">' + esc(p.shortTitle || p.title) + '</span>' +
-        '<span class="toc-meta">' + esc(p.year) + (p.status ? ' \u00b7 ' + esc(p.status.label) : '') + '</span></span>' +
-        '<span class="badge venue">' + esc(p.venue) + '</span>' +
+        '<span class="toc-text"><span class="toc-title">' + esc(p.shortTitle || p.title) + '</span></span>' +
       '</button>').join('');
     return '<section class="slide slide-cover" id="cover" aria-label="Title and contents">' +
       '<div class="slide-inner"><div class="slide-content cover-grid">' +
@@ -179,34 +225,31 @@
 
   function paperSlideHTML(p, i) {
     const links = p.links || {};
-    const status = p.status ? '<span class="badge status-' + esc(p.status.key) + '">' + esc(p.status.label) + '</span>' : '';
-    const tags = (p.tags || []).slice(0, 6).map((t) => '<span class="tag">' + esc(t) + '</span>').join('');
-    const highlights = (p.highlights || []).length
-      ? '<ul class="highlights" aria-label="Key results">' + p.highlights.slice(0, 3).map((h) =>
-          '<li><strong title="' + esc(h.value) + '">' + esc(h.value) + '</strong><span>' + esc(h.label) + '</span></li>').join('') + '</ul>'
-      : '';
-    return '<section class="slide slide-paper" id="' + esc(p.id) + '" data-paper="' + i + '" aria-label="' + esc(p.shortTitle || p.title) + '">' +
-      '<div class="slide-inner"><div class="slide-content paper-grid">' +
-        '<div class="paper-text">' +
-          '<div class="badges"><span class="num">' + pad2(i + 1) + '</span><span class="badge venue">' + esc(p.venue) + '</span>' + status + '<span class="badge year">' + esc(p.year) + '</span></div>' +
-          '<h2 class="paper-title">' + esc(p.title) + '</h2>' +
-          (SITE.showAuthors === false ? '' : '<p class="authors">' + authorsPlain(p) + '</p>') +
-          (p.tldr ? '<div class="tldr"><span class="tldr-label">TL;DR</span><p>' + esc(p.tldr) + '</p></div>' : '') +
-          highlights +
-          '<div class="actions">' +
-            (links.pdf ? btnHTML(links.pdf, links.pdfLabel || 'Paper PDF', ICONS.pdf, 'btn-dark') : '') +
-            '<button class="btn" type="button" data-abstract="' + esc(p.id) + '">' + ICONS.abstract + '<span>Abstract</span></button>' +
-            '<button class="btn" type="button" data-bibtex="' + esc(p.id) + '">' + ICONS.bibtex + '<span>BibTeX</span></button>' +
-            (links.arxiv ? btnHTML(links.arxiv, 'arXiv', ICONS.arxiv) : '') +
-            (links.code ? btnHTML(links.code, 'Code', ICONS.code) : '') +
-            (links.project ? btnHTML(links.project, 'Project page', ICONS.link) : '') +
-          '</div>' +
-          (tags ? '<div class="tags">' + tags + '</div>' : '') +
-        '</div>' +
-        '<div class="paper-visual' + ((p.figures || []).length ? ' has-figs' : '') + '">' +
-          figuresHTML(p) +
-          '<div class="paper-media">' + mediaHTML(p, { compact: (p.figures || []).length > 0 }) + '</div>' +
-        '</div>' +
+    const points = (p.points || []).slice(0, 3).map((t) => '<li><span>' + esc(t) + '</span></li>').join('');
+    const textItems = placement(p).text;
+    const floats = textItems.filter((it) => it.kind === 'img' && it.ar < 2).map((it) => inlineImgHTML(p, it)).join('');
+    const blocks = textItems.filter((it) => !(it.kind === 'img' && it.ar < 2)).map((it) =>
+      it.kind === 'img' ? inlineImgHTML(p, it) : '<div class="text-video" style="--ar:' + it.ar.toFixed(4) + '">' + videoFrameHTML(it.v) + '</div>').join('');
+    const stack = (p.layout || {}).mode === 'stack';
+    const actions = '<div class="actions">' +
+      (links.pdf ? btnHTML(links.pdf, links.pdfLabel || 'Paper PDF', ICONS.pdf, 'btn-dark') : '') +
+      '<button class="btn" type="button" data-abstract="' + esc(p.id) + '">' + ICONS.abstract + '<span>Abstract</span></button>' +
+      '<button class="btn" type="button" data-bibtex="' + esc(p.id) + '">' + ICONS.bibtex + '<span>BibTeX</span></button>' +
+      (links.arxiv ? btnHTML(links.arxiv, 'arXiv', ICONS.arxiv) : '') +
+      (links.code ? btnHTML(links.code, 'Code', ICONS.code) : '') +
+      (links.project ? btnHTML(links.project, 'Project page', ICONS.link) : '') +
+      '</div>';
+    const head = '<div class="badges"><span class="num">' + pad2(i + 1) + '</span></div>' +
+      '<h2 class="paper-title">' + esc(p.title) + '</h2>' +
+      (SITE.showAuthors === false ? '' : '<p class="authors">' + authorsPlain(p) + '</p>');
+    const text = stack
+      ? '<div class="paper-text stack-text"><div class="stack-head">' + head + actions + '</div>' +
+        '<div class="stack-points">' + (points ? '<ul class="points">' + points + '</ul>' : '') + floats + blocks + '</div></div>'
+      : '<div class="paper-text">' + head +
+        '<div class="points-wrap">' + floats + (points ? '<ul class="points">' + points + '</ul>' : '') + '</div>' + blocks + actions + '</div>';
+    return '<section class="slide slide-paper' + (stack ? ' slide-stack' : '') + '" id="' + esc(p.id) + '" data-paper="' + i + '" aria-label="' + esc(p.shortTitle || p.title) + '">' +
+      '<div class="slide-inner"><div class="slide-content paper-grid' + (stack ? ' stack' : '') + (textItems.length ? ' has-inline' : '') + '">' +
+        text + boardHTML(p) +
       '</div></div></section>';
   }
 
@@ -214,8 +257,8 @@
     const c = SITE.closing || {};
     const points = (c.points || []).map((pt, i) =>
       '<li><span class="num">' + pad2(i + 1) + '</span><div><strong>' + esc(pt.lead) + '</strong> ' + esc(pt.text) + '</div></li>').join('');
-    const list = PAPERS.map((p) =>
-      '<button type="button" class="end-item" data-goto="' + esc(p.id) + '"><span class="badge venue">' + esc(p.venue) + '</span><span>' + esc(p.shortTitle || p.title) + '</span></button>').join('');
+    const list = PAPERS.map((p, i) =>
+      '<button type="button" class="end-item" data-goto="' + esc(p.id) + '"><span class="num">' + pad2(i + 1) + '</span><span>' + esc(p.shortTitle || p.title) + '</span></button>').join('');
     return '<section class="slide slide-end" id="end" aria-label="Summary">' +
       '<div class="slide-inner"><div class="slide-content end-grid">' +
         '<div class="end-text"><p class="eyebrow">' + esc(c.eyebrow || 'In short') + '</p><h2>' + esc(c.title || 'Takeaways') + '</h2>' +
@@ -277,28 +320,48 @@
     if (!p) return;
     const d = $('#info-dialog');
     $('#info-title').textContent = p.title;
-    $('#info-sub').textContent = p.venueFull || p.venue || '';
+    $('#info-sub').textContent = '';
     $('#info-body').innerHTML =
+      (p.tldr ? '<h4>TL;DR</h4><p>' + esc(p.tldr) + '</p>' : '') +
+      ((p.highlights || []).length ? '<h4>Key results</h4><ul class="info-list">' + p.highlights.map((h) => '<li><strong>' + esc(h.value) + '</strong> ' + esc(h.label) + '</li>').join('') + '</ul>' : '') +
       (SITE.showAuthors === false ? '' : '<h4>Authors</h4>' + authorsFull(p)) +
       '<h4>' + esc(p.abstractLabel || 'Abstract') + '</h4><p>' + esc(p.abstract || '') + '</p>' +
       ((p.tags || []).length ? '<h4>Keywords</h4><p>' + p.tags.map(esc).join(' · ') + '</p>' : '');
     openDialog(d);
   }
 
-  const lightbox = { figs: [], index: 0 };
-  function showFig(i) {
-    if (!lightbox.figs.length) return;
-    lightbox.index = (i + lightbox.figs.length) % lightbox.figs.length;
-    const f = lightbox.figs[lightbox.index];
-    const img = $('#fig-img');
-    img.src = f.src; img.alt = 'Figure ' + (lightbox.index + 1);
-    $('#fig-counter').textContent = 'Figure ' + (lightbox.index + 1) + ' / ' + lightbox.figs.length;
+  const lightbox = { items: [], index: 0 };
+  function showItem(i) {
+    if (!lightbox.items.length) return;
+    lightbox.index = (i + lightbox.items.length) % lightbox.items.length;
+    const it = lightbox.items[lightbox.index];
+    const img = $('#fig-img'), vid = $('#fig-video');
+    if (it.kind === 'video') {
+      img.hidden = true; img.removeAttribute('src');
+      vid.hidden = false; vid.loop = !!it.loop; vid.muted = !!it.loop; vid.controls = true; vid.src = it.src;
+      const pr = vid.play(); if (pr && pr.catch) pr.catch(() => {});
+    } else {
+      vid.hidden = true; vid.pause(); vid.removeAttribute('src'); vid.load();
+      img.hidden = false; img.src = it.src; img.alt = 'Image ' + (lightbox.index + 1);
+    }
+    $('#fig-counter').textContent = (lightbox.index + 1) + ' / ' + lightbox.items.length;
+    $('#fig-prev').hidden = $('#fig-next').hidden = lightbox.items.length < 2;
   }
-  function openFigures(p, i) {
-    if (!p || !(p.figures || []).length) return;
-    lightbox.figs = p.figures.filter((f) => f && f.src).slice(0, 2);
-    showFig(i || 0);
-    openDialog($('#fig-dialog'));
+  function openGallery(p, i) {
+    if (!p) return;
+    const items = (p.gallery || []).filter((g) => g && g.src).map((g) => ({ kind: 'img', src: g.src }));
+    if (!items.length) return;
+    lightbox.items = items; showItem(i || 0); openDialog($('#fig-dialog'));
+  }
+  function openVideoLightbox(v) {
+    if (!v) return;
+    lightbox.items = [{ kind: 'video', src: v.dataset.src || v.src, loop: v.hasAttribute('loop') }];
+    showItem(0); openDialog($('#fig-dialog'));
+  }
+  function setupLightbox() {
+    const d = $('#fig-dialog');
+    if (!d) return;
+    d.addEventListener('close', () => { const vid = $('#fig-video'); vid.pause(); vid.removeAttribute('src'); vid.load(); vid.hidden = true; });
   }
 
   let currentBibtex = '';
@@ -396,7 +459,7 @@
 
   function toggleMainVideo() {
     const s = deck.slides[deck.index];
-    const v = s && ($('.media-main video', s) || $('video', s));
+    const v = s && $('video', s);
     if (!v) return;
     video.load(v);
     if (v.paused) { if (!v.hasAttribute('loop')) v.controls = true; const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); }
@@ -430,10 +493,12 @@
       if (t.closest('#home')) { goTo(0); return; }
       if (t.closest('#fs')) { toggleFullscreen(); return; }
       if (t.closest('#help-btn')) { openDialog($('#help-dialog')); return; }
-      const fig = t.closest('[data-fig]');
-      if (fig) { openFigures(PAPERS.find((p) => p.id === fig.dataset.fig), +fig.dataset.figIndex || 0); return; }
-      if (t.closest('[data-fig-prev]')) { showFig(lightbox.index - 1); return; }
-      if (t.closest('[data-fig-next]')) { showFig(lightbox.index + 1); return; }
+      const gal = t.closest('[data-gallery]');
+      if (gal) { openGallery(PAPERS.find((p) => p.id === gal.dataset.gallery), +gal.dataset.galleryIndex || 0); return; }
+      const ex = t.closest('[data-expand]');
+      if (ex) { openVideoLightbox($('video', ex.parentElement)); return; }
+      if (t.closest('[data-fig-prev]')) { showItem(lightbox.index - 1); return; }
+      if (t.closest('[data-fig-next]')) { showItem(lightbox.index + 1); return; }
       const abs = t.closest('[data-abstract]');
       if (abs) { openAbstract(PAPERS.find((p) => p.id === abs.dataset.abstract)); return; }
       const bib = t.closest('[data-bibtex]');
@@ -451,7 +516,7 @@
       if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const figDlg = $('#fig-dialog');
       if (figDlg && figDlg.open) {                             // ← → flip between the two figures
-        if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); showFig(lightbox.index + (ev.key === 'ArrowRight' ? 1 : -1)); }
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); showItem(lightbox.index + (ev.key === 'ArrowRight' ? 1 : -1)); }
         return;
       }
       if (dialogOpen()) return;                               // Esc is handled by <dialog> itself
@@ -470,7 +535,7 @@
         case 'f': case 'F': toggleFullscreen(); return;
         case 'a': case 'A': openAbstract(currentPaper()); return;
         case 'b': case 'B': openBibtex(currentPaper()); return;
-        case 'g': case 'G': openFigures(currentPaper(), 0); return;
+        case 'g': case 'G': openGallery(currentPaper(), 0); return;
         case 'v': case 'V': toggleMainVideo(); return;
         case '?': openDialog($('#help-dialog')); return;
         default:
@@ -514,6 +579,30 @@
     window.addEventListener('hashchange', () => goTo(indexFromHash(), { silent: true }));
   }
 
+  /* ------------------------------------------------------------ fitting */
+  // If a slide's text column is taller than the slide, shorten it step by step:
+  // 1 smaller type, 2 bullets clamped to two lines, 3 third bullet hidden, 4 smaller inline image.
+  const TIGHT_STEPS = 4;
+  const twoColumn = () => window.matchMedia('(min-width: 961px) and (orientation: landscape)').matches;
+  function fitSlides() {
+    $$('.slide-paper').forEach((s) => {
+      for (let k = 1; k <= TIGHT_STEPS; k++) s.classList.remove('tight-' + k);
+      if (!twoColumn()) return;
+      const inner = $('.slide-inner', s);
+      const board = $('.board', s);
+      // side layout: the text column must not overflow the slide;
+      // stack layout: the grid is pinned to the slide height, so keep the board at least 60 % of it
+      const cs = getComputedStyle(inner);
+      const contentH = inner.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const cramped = s.classList.contains('slide-stack')
+        ? () => !!board && board.clientHeight < 0.6 * contentH
+        : () => inner.scrollHeight > inner.clientHeight + 1;
+      for (let k = 1; k <= TIGHT_STEPS && cramped(); k++) s.classList.add('tight-' + k);
+    });
+  }
+  let fitTimer = 0;
+  window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitSlides, 120); });
+
   /* ----------------------------------------------------------- idle HUD */
   function setupIdle() {
     let timer = 0;
@@ -530,10 +619,13 @@
   function boot() {
     buildDeck();
     setupVideos();
+    setupLightbox();
     setupInput();
     setupIdle();
     if (!canFullscreen) $('#fs').classList.add('is-hidden');
     goTo(indexFromHash(), { silent: true });
+    fitSlides();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSlides);
     requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('is-ready')));
   }
 

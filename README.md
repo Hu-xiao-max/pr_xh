@@ -2,9 +2,14 @@
 
 A static, build-free presentation page: cover (opening text + clickable table of contents)
 → one slide per paper → closing. Open it in a browser, press **F** for fullscreen and present
-with the keyboard, a clicker, the mouse wheel or touch swipes. Each paper slide shows the TL;DR, key numbers, buttons for
-PDF / abstract / BibTeX, Figure 1 and Figure 2 of the paper as an overlapping pair (no
-captions, click to enlarge) and the demo videos; videos load only for the slide on screen.
+with the keyboard, a clicker, the mouse wheel or touch swipes. Each paper slide is mostly visual: a text band on top (title, 2–3 bullets, buttons for
+PDF / abstract / BibTeX) and, below it, a full-width board of images and demo videos. The text always
+comes first, on phones as well, where the board becomes one item per row at its own aspect ratio
+(portrait clips are paired). Every paper has its own board composition (`layout` in papers.js),
+chosen so that each image is drawn large enough to read. If the text column would not fit the screen, the
+text is shortened automatically (smaller type → two-line bullets → third bullet hidden → smaller media).
+Images enlarge on click, clips have an enlarge button, and videos load only for the slide on screen.
+Neither the conference, the year nor the submission status is shown anywhere on the slides (they stay in the BibTeX).
 The page is deliberately impersonal (no bio or contact details).
 
 ```
@@ -14,8 +19,8 @@ assets/js/main.js          slide engine: navigation, dialogs, IntersectionObserv
 assets/data/papers.js      ← ALL content lives here: cover/closing copy (SITE), paper order, metadata, captions
 assets/videos_web/*.mp4    web-optimized videos (H.264, yuv420p, ≤1280 px, +faststart)
 assets/posters/*.jpg       poster frames shown before a video is fetched
-assets/figures/*.jpg       Figure 1 and 2 of each paper, cut from the PDFs (no captions)
-tools/extract_figures.py   re-cuts the figures (needs PyMuPDF, see the file header)
+assets/images/*.jpg        the images from the paper folders, web-sized (tools/optimize_images.py)
+tools/extract_figures.py   optional: cuts Figure 1/2 out of a PDF when you have no image for a paper (needs PyMuPDF)
 tools/optimize_videos.py   regenerates videos_web/ and posters/ from the paper folders
 tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading, dialogs, layout)
 <paper folders>/           original PDFs and source videos
@@ -31,7 +36,7 @@ tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading,
 | Jump to paper *n* | `1` … `9` |
 | Fullscreen | `F` |
 | Abstract / BibTeX of the current paper | `A` / `B` |
-| Enlarge the paper's figures (← → flips between them) | `G`, or click a figure |
+| Enlarge the slide's images (← → flips between them) | `G`, or click an image; clips have a ⤢ button |
 | Play or pause the slide's main video | `V` |
 | Shortcut list | `?` |
 
@@ -76,10 +81,18 @@ author lists stay in the data for BibTeX but are not displayed anywhere). The `<
    - `media.main` → long/narrated video, shown large with native controls.
    - `media.clips` → short demos, laid out automatically (portrait clips side by side,
      landscape clips stacked). `audio: true` adds an unmute button.
-   - `highlights` → up to three key numbers; `tldr` → the one-paragraph pitch.
-   - `figures` → `[{src, w, h}]`, normally produced by `tools/extract_figures.py`
-     (add the paper to its `PAPERS` map; use `OVERRIDES` for a manual page/rectangle).
-     `assets/figures/manifest.json` lists the pixel sizes to copy.
+   - `points` → the 2–3 bullets on the slide. `tldr` and `highlights` are shown in the Abstract dialog.
+   - `gallery` → `[{src, w, h}]` images on the slide, in order. Drop PNG/JPEG files into the paper
+     folder and run `python3 tools/optimize_images.py`; it writes web-sized copies to `assets/images/`
+     and prints the entries. Without a `layout`, tiny images (long side ≤ 600 px) are placed beside
+     the bullets and everything else on the board; force a side with `place: 'text'` / `place: 'board'`.
+   - `layout` fixes the composition: `mode: 'stack'` places the text band above a full-width
+     board (used by every paper here; without it the text sits in a column on the left),
+     `text: ['video:0']` puts items under the bullets, `board: { cols, rows, cells: [{ item: 'img:0', span: 2 }, { item: 'video:1' }] }` defines
+     the grid (`cols`/`rows` may be counts or track lists like `'2fr 1fr'`; `rowSpan` spans rows). Without `layout`
+     the board is composed automatically: images first, then videos; 1–2 items stacked, 3–4 in two
+     columns, 5–6 in three; with a spare cell the widest image takes a double-width cell (or a portrait
+     item a double-height one); portrait clips go side by side.
 4. Fill in `links.arxiv` / `links.code` when available — buttons appear only when a link is set.
 
 ## Video loading policy (performance)

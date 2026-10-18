@@ -87,15 +87,16 @@
     </div>
   </dialog>
 
-  <dialog id="fig-dialog" class="lightbox" aria-label="Figure">
+  <dialog id="fig-dialog" class="lightbox" aria-label="Enlarged image or video">
     <div class="lightbox-inner">
       <img id="fig-img" alt="">
+      <video id="fig-video" playsinline hidden></video>
       <div class="lightbox-bar">
-        <button class="hud-btn" type="button" aria-label="Previous figure (←)" data-fig-prev>
+        <button class="hud-btn" id="fig-prev" type="button" aria-label="Previous image (←)" data-fig-prev>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <span class="counter" id="fig-counter">Figure 1 / 2</span>
-        <button class="hud-btn" type="button" aria-label="Next figure (→)" data-fig-next>
+        <span class="counter" id="fig-counter">1 / 2</span>
+        <button class="hud-btn" id="fig-next" type="button" aria-label="Next image (→)" data-fig-next>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
         <button class="btn" type="button" data-close-dialog>Close</button>
@@ -121,8 +122,8 @@
           <li><span>Fullscreen</span><span><kbd>F</kbd></span></li>
           <li><span>Abstract of this paper</span><span><kbd>A</kbd></span></li>
           <li><span>BibTeX of this paper</span><span><kbd>B</kbd></span></li>
-          <li><span>Enlarge the figures (then ← → to flip)</span><span><kbd>G</kbd></span></li>
-          <li><span>Play / pause the main video</span><span><kbd>V</kbd></span></li>
+          <li><span>Enlarge the images (then ← → to flip); clips have a ⤢ button</span><span><kbd>G</kbd></span></li>
+          <li><span>Play / pause the first video</span><span><kbd>V</kbd></span></li>
           <li><span>Close a dialog</span><span><kbd>Esc</kbd></span></li>
         </ul>
         <h4>Export</h4>

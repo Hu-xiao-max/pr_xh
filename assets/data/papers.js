@@ -7,7 +7,17 @@
      `media.clips` = short demo loops → muted autoplay while the slide is on screen.
      `w`/`h` are the encoded pixel size (keeps the layout stable before loading),
      `duration` in seconds, `audio: true` adds an unmute button to a loop.
-   • `figures` = [{src, w, h}] — Figure 1 and 2 images, drawn overlapping above the video (no text).
+   • `points`  = the 2–3 bullets shown on the slide; `tldr`/`highlights` only appear in the Abstract dialog.
+   • `gallery` = [{src, w, h}] the images from the paper folder (tools/optimize_images.py writes
+     web-sized copies to assets/images/ and prints these entries). Small images (long side <= 900 px)
+     are placed beside the bullet points, large ones on the board with the videos.
+   • `layout` (optional) fixes the slide composition. Every paper here uses `mode: 'stack'` (text band
+     above a full-width board) so the text is always read first, on phones too; without `mode` the text
+     sits in a column on the left. `text` lists items shown under the bullets; `board.cells` the grid cells (`item` = 'img:N' from `gallery` or 'video:N' from
+     media.main + clips, `span` = column span, `rowSpan` = row span); `cols` / `rows` are counts or
+     CSS track lists such as '2fr 1fr'.
+     Without `layout` the board is composed automatically. Images never shrink below a legible size.
+   • `venue` / `status` / `venueFull` are kept as data only (BibTeX); the slides show neither conference nor status.
    • `caption` may contain HTML; everything else is plain text.
    • Lines marked TODO are placeholders to confirm/fill in (also listed in README).
    ============================================================================= */
@@ -85,11 +95,19 @@ window.PAPERS = [
   address   = {Pittsburgh, PA, USA},
   year      = {2026}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/uniprototype-fig1.jpg', w: 502, h: 307 },
-      { src: 'assets/figures/uniprototype-fig2.jpg', w: 820, h: 449 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'A shared vocabulary of soft, co-activating skill prototypes learned from unpaired human and robot videos',
+      'The number of active prototypes adapts automatically to task complexity',
+      '87.5% cross-embodiment success in simulation (XSkill 78.2%); five real tasks on a Franka Research 3',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/uniprototype-pipeline2.jpg', w: 1600, h: 869 },   // iros26/pipeline2.png
+    ],
+    // Layout: text band on top; below it the pipeline figure (left) and the overview video (right).
+    layout: { mode: 'stack', board: { cols: '1fr 1fr', rows: 1, cells: [{ item: 'img:0' }, { item: 'video:0' }] } },
     media: {
       main: {
         kind: 'overview',
@@ -134,11 +152,20 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review at the 2027 IEEE International Conference on Robotics and Automation (ICRA)}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/pixelpoint-rl-fig1.jpg', w: 297, h: 243 },
-      { src: 'assets/figures/pixelpoint-rl-fig2.jpg', w: 940, h: 559 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'Keypoints tracked in uncalibrated RGB views are both the policy state and the reward',
+      'No extrinsics, 3D reconstruction or pose estimation; a Bayesian contact belief gates a dual-head SAC',
+      '84.4% success on seven real contact-rich tasks; tracking recovers after 30 s of full occlusion',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/pixelpoint-rl-figurerewirte.jpg', w: 780, h: 637 },   // pixel_RL/figurerewirte.png
+      { src: 'assets/images/pixelpoint-rl-towel-track.jpg', w: 1472, h: 1260 },   // pixel_RL/towel_track.png
+    ],
+    // Layout: text band on top; below it the two figures and the overview video side by side, full width.
+    layout: { mode: 'stack', board: { cols: '1fr 1fr 1.05fr', rows: 1, cells: [{ item: 'img:0' }, { item: 'img:1' }, { item: 'video:0' }] } },
     media: {
       main: {
         kind: 'overview',
@@ -183,11 +210,21 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review at the 2027 IEEE International Conference on Robotics and Automation (ICRA)}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/object-spin-fig1.jpg', w: 1001, h: 336 },
-      { src: 'assets/figures/object-spin-fig2.jpg', w: 454, h: 419 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'Start learning where opposing fingertip contacts form (closure events), not at statically stable grasps',
+      'One angle-space closure certificate gives both the training resets and rotation-gated reward shaping',
+      'Pen-spinning sustain 18% → 78%; eight physical objects on a 22-DoF Sharpa Wave hand',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/object-spin-overview.jpg', w: 1600, h: 527 },   // wrench_spin/overview.png
+      { src: 'assets/images/object-spin-wrench-pipeline.jpg', w: 841, h: 776 },   // wrench_spin/wrench_pipeline.png
+    ],
+    // Layout: text band on top; below it the wide overview with the video under it (left) and the
+    // wrench-space figure spanning both rows (right).
+    layout: { mode: 'stack', board: { cols: '2fr 1fr', rows: 2, cells: [{ item: 'img:0' }, { item: 'img:1', rowSpan: 2 }, { item: 'video:0' }] } },
     media: {
       main: {
         kind: 'overview',
@@ -232,11 +269,19 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review as a conference paper at ICLR 2027}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/cloth-unfold-fig1.jpg', w: 298, h: 377 },
-      { src: 'assets/figures/cloth-unfold-fig2.jpg', w: 802, h: 477 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'A transparent table pairs the top silhouette mask with a bottom contact mask that reveals support',
+      'Fold–contact affordance maps feed an attention encoder and a residual grasp prior',
+      '−82.2% folded area vs. raw dual masks; the bandit scorer is the best of 21 variants',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/cloth-unfold-selected-record-metrics.jpg', w: 1240, h: 662 },   // unfold/selected_record_20260604_135237_metrics.png
+    ],
+    // Layout: text band on top; below it the result figure (left) and the overview video (right).
+    layout: { mode: 'stack', board: { cols: '1.3fr 1fr', rows: 1, cells: [{ item: 'img:0' }, { item: 'video:0' }] } },
     media: {
       main: {
         kind: 'overview',
@@ -286,11 +331,20 @@ window.PAPERS = [
   year    = {2026},
   note    = {Under review}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/physgrasp-fig1.jpg', w: 768, h: 308 },
-      { src: 'assets/figures/physgrasp-fig2.jpg', w: 1093, h: 326 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'NeRF mesh → force-closure grasp candidates → GPU physics filter drops the unstable ones',
+      '6,500 grasp labels in 2.2 h instead of 13 h',
+      'Fine-tuning lifts success 62% → 91% in simulation and 29.6% → 73.3% on the real robot',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/physgrasp-interaction.jpg', w: 1218, h: 478 },   // Advance_wiley/interaction.png
+    ],
+    // Layout: text band on top; below it the four-object figure spanning both rows (left) and the two
+    // real-robot clips stacked on the right.
+    layout: { mode: 'stack', board: { cols: '2fr 1fr', rows: 2, cells: [{ item: 'img:0', rowSpan: 2 }, { item: 'video:0' }, { item: 'video:1' }] } },
     media: {
       title: 'Real-robot demos',
       clips: [
@@ -349,11 +403,21 @@ window.PAPERS = [
   booktitle = {IEEE International Conference on Robotics and Automation (ICRA) Workshops},
   year      = {2025}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/tactile-grasp-fig1.jpg', w: 454, h: 256 },
-      { src: 'assets/figures/tactile-grasp-fig2.jpg', w: 233, h: 187 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'A MuJoCo tactile simulator plus PPO: the grasp posture adapts from touch alone',
+      'Robust when the object-pose estimate is wrong (occlusions, partial views)',
+      'Down-sampled tactile observations bridge simulated and real sensors',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+      { src: 'assets/images/tactile-grasp-ex2.jpg', w: 484, h: 137 },   // icra25/ex2.png
+      { src: 'assets/images/tactile-grasp-grasp-interaction.jpg', w: 762, h: 1016 },   // icra25/grasp_interaction.png
+    ],
+    // Layout: text band on top; below it the real-robot photos spanning two rows (left), the simulation
+    // strip across the top right and the two clips under it.
+    layout: { mode: 'stack', board: { cols: '1.1fr 1.45fr 1.45fr', rows: '1fr 1.5fr', cells: [{ item: 'img:1', rowSpan: 2 }, { item: 'img:0', span: 2 }, { item: 'video:0' }, { item: 'video:1' }] } },
     media: {
       title: 'Demos',
       clips: [
@@ -417,11 +481,18 @@ window.PAPERS = [
   year         = {2025},
   howpublished = {Presentation at the IEEE 4th International Conference on Intelligent Reality (ICIR), Boston, MA, USA}
 }`,
-    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
-    figures: [
-      { src: 'assets/figures/teleop-fig1.jpg', w: 1426, h: 675 },
-      { src: 'assets/figures/teleop-fig2.jpg', w: 986, h: 565 },
+    // 2–3 bullet points shown on the slide (the TL;DR and key numbers stay in the Abstract dialog)
+    points: [
+      'Apple Vision Pro hand tracking drives an underactuated 6-DoF hand (five bending motions + thumb rotation)',
+      'A palm centroid from three tracked key points stabilises noisy, asymmetric tracking',
+      'The robot’s head camera is streamed to the headset over WebRTC',
     ],
+    // images on the slide, in order (only the images from the paper folder, web-sized by tools/optimize_images.py).
+    // Long side <= 900 px -> shown beside the bullet points; larger -> on the board next to the videos. Click = enlarge.
+    gallery: [
+    ],
+    // Layout: text band on top; the three phone clips side by side below.
+    layout: { mode: 'stack', board: { cols: 3, rows: 1, cells: [{ item: 'video:0' }, { item: 'video:1' }, { item: 'video:2' }] } },
     media: {
       title: 'Demo clips',
       clips: [
