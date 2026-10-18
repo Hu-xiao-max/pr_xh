@@ -3,7 +3,7 @@
 
    Slides: cover → overview (table of contents) → one slide per paper → closing.
    • Navigation: ← → ↑ ↓ Space PgUp PgDn Home End, mouse wheel, touch swipe,
-     on-screen arrows, dots, 1-9 jump to paper n, O overview, F fullscreen,
+     on-screen arrows, dots, Home button (Home / H), 1-9 jump to paper n, O overview, F fullscreen,
      A abstract of the current paper, V play/pause its main video, ? help.
    • URL hash (#/paper-id) deep-links to a slide.
    • Videos: created with preload="none" and no src. An IntersectionObserver
@@ -253,6 +253,7 @@
     $('#progress').style.width = ((i + 1) / deck.slides.length * 100) + '%';
     $('#prev').disabled = i === 0;
     $('#next').disabled = i === deck.slides.length - 1;
+    $('#home').disabled = i === 0;
     const inner = $('.slide-inner', deck.slides[i]);
     if (inner) inner.scrollTop = 0;
     // Pre-attach src + poster on the neighbouring slides (no media bytes are fetched: preload="none").
@@ -408,6 +409,7 @@
       if (dot) { goTo(+dot.dataset.gotoIndex); return; }
       if (t.closest('#prev')) { go(-1); return; }
       if (t.closest('#next')) { go(1); return; }
+      if (t.closest('#home')) { goTo(0); return; }
       if (t.closest('#fs')) { toggleFullscreen(); return; }
       if (t.closest('#help-btn')) { openDialog($('#help-dialog')); return; }
       const abs = t.closest('[data-abstract]');
@@ -437,6 +439,7 @@
         case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace': ev.preventDefault(); go(-1); return;
         case 'Home': ev.preventDefault(); goTo(0); return;
         case 'End': ev.preventDefault(); goTo(deck.slides.length - 1); return;
+        case 'h': case 'H': goTo(0); return;
         case 'f': case 'F': toggleFullscreen(); return;
         case 'o': case 'O': goToId('overview'); return;
         case 'a': case 'A': openAbstract(currentPaper()); return;

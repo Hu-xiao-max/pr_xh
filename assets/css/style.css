@@ -252,7 +252,18 @@ kbd {
   background: linear-gradient(to top, rgba(255, 255, 255, .92), rgba(255, 255, 255, 0));
 }
 .hud > * { pointer-events: auto; }
-.is-idle .hud { opacity: 0; }
+.is-idle .hud-brand, .is-idle .dots, .is-idle .hud-controls { opacity: 0; }
+.is-idle .hud-home { opacity: .55; }
+.hud-brand, .dots, .hud-controls, .hud-home { transition: opacity .4s ease; }
+.hud-home {
+  display: inline-flex; align-items: center; gap: .4rem; height: 36px; padding: 0 .95rem 0 .8rem;
+  border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: #fff;
+  font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background .2s, transform .2s, opacity .4s ease;
+}
+.hud-home:hover { background: #000; transform: translateY(-1px); }
+.hud-home:disabled { opacity: .3; cursor: default; transform: none; }
+.hud-home svg { width: 16px; height: 16px; }
 .hud-brand { font-weight: 600; font-size: .85rem; color: var(--ink-2); white-space: nowrap; display: flex; align-items: center; gap: .5rem; }
 .brand-mark {
   width: 24px; height: 24px; border-radius: 7px; flex: none;
@@ -318,7 +329,8 @@ dialog::backdrop { background: rgba(15, 23, 42, .5); -webkit-backdrop-filter: bl
 @media (max-width: 700px) {
   :root { --hud-h: 52px; }
   .toc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hud-brand span:not(.brand-mark), .dots { display: none; }
+  .hud-brand span:not(.brand-mark), .dots, .hud-home span { display: none; }
+  .hud-home { padding: 0; width: 36px; justify-content: center; }
   .hud { justify-content: space-between; }
   .tldr { grid-template-columns: 1fr; gap: .3rem; }
   .highlights { grid-template-columns: 1fr 1fr; }

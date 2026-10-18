@@ -23,7 +23,8 @@ tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading,
 | Action | Keys |
 |---|---|
 | Next / previous slide | `→` `↓` `Space` `PgDn` / `←` `↑` `PgUp` (clickers send these) |
-| First / last slide | `Home` / `End` |
+| Back to the cover | `Home` / `H`, or the **Home** button at the bottom right |
+| Last slide | `End` |
 | Jump to paper *n* | `1` … `9` |
 | Overview slide | `O` |
 | Fullscreen | `F` |
@@ -56,8 +57,8 @@ optimized copies in `assets/videos_web/`, so you may exclude the raw videos
 ## Edit the copy
 
 `SITE` at the top of `assets/data/papers.js` holds the cover headline and intro (`hero`),
-the closing slide (`closing.points`, `closing.thanks`) and `showAuthors` (set to `false` to
-hide author lists everywhere). The `<title>` and social-preview tags are at the top of
+the closing slide (`closing.points`, `closing.thanks`) and `showAuthors` (`false` by default:
+author lists stay in the data for BibTeX but are not displayed anywhere). The `<title>` and social-preview tags are at the top of
 `index.html`.
 
 ## Add or edit a paper

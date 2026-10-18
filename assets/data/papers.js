@@ -16,10 +16,10 @@ window.SITE = {
 
   // Cover slide copy. Plain text; `accent` is the grey second half of the headline.
   hero: {
-    eyebrow: 'Research highlights \u00b7 Robot learning for contact-rich manipulation',
-    title: 'Robots that learn to',
-    accent: 'manipulate the physical world',
-    intro: 'Grasping, dexterous in-hand skills, real-world reinforcement learning, deformable objects, human-to-robot skill transfer and teleoperation \u2014 each paper with its demo videos, abstract and BibTeX.',
+    eyebrow: 'Research highlights \u00b7 Robot skill learning',
+    title: 'Robots need skills.',
+    accent: 'This work helps them learn.',
+    intro: 'A robot is only as capable as the skills it can acquire \u2014 grasping an unfamiliar object, spinning a pen, unfolding a shirt, or picking up a trick a person just showed it. Every project here asks the same question: how can a robot learn such skills faster, more robustly and from fewer trials?',
   },
 
   // Closing slide.
@@ -34,9 +34,9 @@ window.SITE = {
     thanks: 'Thank you \u2014 questions?',
   },
 
-  // Show author lists on the paper slides and in the abstract dialog (paper metadata).
-  // Set to false to hide them everywhere.
-  showAuthors: true,
+  // Author lists are kept in the data (BibTeX needs them) but are not shown anywhere:
+  // not on the slides, not in the abstract dialog. Set to true to show them again.
+  showAuthors: false,
 
   // Topic labels used for the cover statistics ("Real Robot" counts real-robot studies).
   topics: [
