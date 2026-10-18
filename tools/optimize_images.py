@@ -7,6 +7,7 @@ assets/images/<slug>-<name>.jpg. A manifest.json with pixel sizes is written so
 the entries can be copied into assets/data/papers.js (`gallery`).
 
 Needs ffmpeg/ffprobe.  Usage: python3 tools/optimize_images.py [--force]
+                              python3 tools/optimize_images.py --js SLUG   # print `gallery:` entries
 """
 from __future__ import annotations
 
@@ -61,7 +62,19 @@ def convert(src: Path, dst: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--force", action="store_true", help="re-create outputs that already exist")
+    ap.add_argument("--js", metavar="SLUG", help="print ready-to-paste `gallery:` entries for this slug and exit")
     args = ap.parse_args()
+    if args.js:
+        mf = OUT_DIR / "manifest.json"
+        items = json.load(mf.open()).get(args.js, []) if mf.exists() else []
+        if not items:
+            print(f"no converted images for slug {args.js!r} - run the conversion first", file=sys.stderr)
+            return 1
+        print("    gallery: [")
+        for it in items:
+            print(f"      {{ src: '{it['src']}', w: {it['w']}, h: {it['h']} }},   // {it['from']}")
+        print("    ],")
+        return 0
     if not shutil.which("ffmpeg"):
         print("ffmpeg not found", file=sys.stderr)
         return 1

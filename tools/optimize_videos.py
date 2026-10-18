@@ -19,6 +19,7 @@ Usage:
     python3 tools/optimize_videos.py --force    # redo everything
     python3 tools/optimize_videos.py --dry-run  # only print the plan
     python3 tools/optimize_videos.py --posters  # only re-create the poster frames
+    python3 tools/optimize_videos.py --js SLUG  # print a `media:` block for papers.js (after converting)
 """
 from __future__ import annotations
 
@@ -193,13 +194,49 @@ def poster_cmd(p: dict) -> list[str]:
             "-q:v", "4", str(p["poster"])]
 
 
+def emit_js(slug: str) -> int:
+    """Print a `media:` block for papers.js from manifest.json (videos >= 60 s or named like an
+    overview become `main`, the rest become autoplay `clips`)."""
+    mf = OUT_DIR / "manifest.json"
+    if not mf.exists():
+        print("run the conversion first (no manifest.json yet)", file=sys.stderr)
+        return 1
+    items = {k: v for k, v in json.load(mf.open()).items() if k.startswith(slug + "-")}
+    if not items:
+        print(f"no converted videos for slug {slug!r} (known: {sorted({k.rsplit('-', 1)[0] for k in json.load(mf.open())})})", file=sys.stderr)
+        return 1
+    def js(name, v, kind):
+        label = "Overview video" if kind == "overview" else name[len(slug) + 1:].replace("-", " ").title()
+        lines = [f"        kind: '{kind}',", f"        label: '{label}',   // TODO: short on-video label",
+                 f"        src: '{v['file']}',", f"        poster: '{v['poster']}',",
+                 f"        w: {v['width']}, h: {v['height']}, duration: {round(v['duration'])},"]
+        if v["audio"] and kind != "overview":
+            lines.append("        audio: true,   // keeps an unmute button; drop it if the track is only noise")
+        lines.append("        caption: '<b>TODO.</b> One sentence (shown as a tooltip).',")
+        return "      {\n" + "\n".join(lines) + "\n      }"
+    overview = [k for k, v in items.items() if v["duration"] >= 60 or re.search(r"overview|supp|sub|main", k)]
+    main = overview[0] if overview else None
+    clips = [k for k in items if k != main]
+    out = ["    media: {"]
+    if main:
+        out.append("      main:\n" + js(main, items[main], "overview").replace("      {", "      {", 1) + ",")
+    if clips:
+        out.append("      clips: [\n" + ",\n".join(js(k, items[k], "loop") for k in clips) + "\n      ],")
+    out.append("    },")
+    print("\n".join(out))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--force", action="store_true", help="re-create outputs that already exist")
     ap.add_argument("--dry-run", action="store_true", help="print the plan and exit")
     ap.add_argument("--posters", action="store_true", help="only (re)generate the poster frames")
+    ap.add_argument("--js", metavar="SLUG", help="print a ready-to-paste `media:` block for this slug and exit")
     args = ap.parse_args()
 
+    if args.js:
+        return emit_js(args.js)
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         print("ffmpeg/ffprobe not found on PATH", file=sys.stderr)
         return 1

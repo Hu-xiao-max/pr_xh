@@ -69,13 +69,22 @@ the closing slide (`closing.points`, `closing.thanks`) and `showAuthors` (`false
 author lists stay in the data for BibTeX but are not displayed anywhere). The `<title>` and social-preview tags are at the top of
 `index.html`.
 
-## Add or edit a paper
+## Add a paper with the skill
+
+Drop the PDF, videos and images into a new folder and tell Claude Code (in this repo)
+something like "我在 pour/ 里加了新素材，帮我整理到网页上" or run `/add-paper`. The skill in
+`.claude/skills/add-paper/` reads the PDF, converts the media, writes the papers.js entry with
+bullets, gallery and a per-paper layout, runs the smoke test, checks screenshots at projector,
+desktop and phone sizes, and reports the TODOs to confirm. The manual steps are below.
+
+## Add or edit a paper by hand
 
 1. Drop the PDF and videos into a folder (e.g. `mypaper/`).
 2. Run `python3 tools/optimize_videos.py` (needs `ffmpeg`). Add the folder to the `SLUGS`
    map in the script if you want a nicer output name. Already-converted files are skipped;
    use `--force` to redo them, `--dry-run` to only print the plan, `--posters` to only
-   re-create poster frames (per-video timestamps live in `POSTER_AT`).
+   re-create poster frames (per-video timestamps live in `POSTER_AT`), and `--js <slug>` to print
+   a ready-to-paste `media:` block. `tools/optimize_images.py --js <slug>` does the same for `gallery`.
 3. Add an entry to `assets/data/papers.js` — array order = slide order.
    `assets/videos_web/manifest.json` lists the exact `w`/`h`/`duration` values to copy.
    - `media.main` → long/narrated video, shown large with native controls.
@@ -107,4 +116,6 @@ author lists stay in the data for BibTeX but are not displayed anywhere). The `<
 ## Test
 
 `tools/test_page.mjs` drives the deck in headless Chrome (Node ≥ 22); run instructions are in
-the file header.
+the file header (`CDP_PORT` / `BASE_URL` select the Chrome debugging port and the served URL).
+`tools/snapshot_slides.mjs` screenshots chosen slides at chosen sizes and prints overflow, bullet
+count and the drawn size of every image.

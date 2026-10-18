@@ -5,13 +5,14 @@
 //   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
 //       --remote-debugging-port=9222 --user-data-dir=/tmp/pr-xh-chrome \
 //       --autoplay-policy=no-user-gesture-required about:blank &
-//   node tools/test_page.mjs            # CDP_PORT=9223 to use another port
+//   node tools/test_page.mjs            # CDP_PORT=9223 / BASE_URL=http://127.0.0.1:8001/ to use other ports
 //
 // Checks slide generation (cover with contents, one slide per paper with bullets + visual board, closing), keyboard / wheel / hash navigation, dialogs, that videos are
 // only attached on the current and neighbouring slides, autoplay + pause-on-leave,
 // that every slide fits a 1280x720 projector without scrolling, and the phone layout.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.CDP_PORT || 9222;
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:8000/';
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
 const page = targets.find((t) => t.type === 'page');
 const ws = new WebSocket(page.webSocketDebuggerUrl);
@@ -36,7 +37,7 @@ const check = (name, cond, extra = '') => { if (cond) { pass++; console.log('  �
 
 await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
-await send('Page.navigate', { url: 'http://127.0.0.1:8000/' });
+await send('Page.navigate', { url: BASE });
 await sleep(1800);
 const nPapers = await ev('window.PAPERS.length');
 
@@ -130,7 +131,8 @@ check('01: image on the left, video on the right', await ev('(() => { const im =
 check('05: figure spans both rows on the left, clips stacked on the right', await ev('(() => { const im = document.querySelector("#physgrasp .board .cell-img").getBoundingClientRect(); const vs = [...document.querySelectorAll("#physgrasp .board .cell-video")].map(e => e.getBoundingClientRect()); return vs.length === 2 && vs.every(v => v.left > im.right) && vs[1].top > vs[0].bottom && im.height > vs[0].height * 1.8; })()'));
 await sleep(600);
 const legible = await ev('(() => { const out = []; document.querySelectorAll(".slide-paper [data-gallery] img").forEach(img => { const b = img.getBoundingClientRect(); const ar = img.naturalWidth / Math.max(1, img.naturalHeight); const w = Math.min(b.width, b.height * ar), h = w / ar; out.push({ id: img.closest(".slide").id, src: img.getAttribute("src").split("/").pop(), w: Math.round(w), h: Math.round(h) }); }); return out; })()');
-check('every image is drawn at a legible size (≥ 300 px wide or ≥ 260 px tall at 1280x720)', legible.length === 9 && legible.every((o) => o.w >= 300 || o.h >= 260), JSON.stringify(legible));
+const nImages = await ev('window.PAPERS.reduce((n,p)=>n+(p.gallery||[]).length,0)');
+check('every image is drawn at a legible size (≥ 300 px wide or ≥ 260 px tall at 1280x720)', legible.length === nImages && legible.every((o) => o.w >= 300 || o.h >= 260), JSON.stringify(legible));
 check('wide strips are drawn wide (physgrasp interaction ≥ 700 px, tactile ex2 ≥ 550 px)', legible.some((o) => /^physgrasp-interaction/.test(o.src) && o.w >= 700) && legible.some((o) => /ex2/.test(o.src) && o.w >= 550), JSON.stringify(legible.filter((o) => /^physgrasp-interaction|ex2/.test(o.src))));
 check('explicit layouts are applied (01 has exactly one image cell and one video cell)', (await ev('document.querySelectorAll("#uniprototype .board .cell-img").length')) === 1 && (await ev('document.querySelectorAll("#uniprototype .board .cell-video").length')) === 1);
 check('teleop without images still gets its three clips side by side', (await ev('document.querySelectorAll("#teleop .board .cell-video").length')) === 3 && (await ev('getComputedStyle(document.querySelector("#teleop .board")).gridTemplateColumns.split(" ").length')) === 3);
