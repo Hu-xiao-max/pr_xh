@@ -1,9 +1,10 @@
 # Research showcase — a web page that works like a slide deck
 
-A static, build-free presentation page: cover → overview → one slide per paper → closing.
-Open it in a browser, press **F** for fullscreen and present with the keyboard, a clicker,
-the mouse wheel or touch swipes. Each paper slide shows the TL;DR, key numbers, buttons for
-PDF / abstract / BibTeX and the demo videos; videos load only for the slide on screen.
+A static, build-free presentation page: cover (opening text + clickable table of contents)
+→ one slide per paper → closing. Open it in a browser, press **F** for fullscreen and present
+with the keyboard, a clicker, the mouse wheel or touch swipes. Each paper slide shows the TL;DR, key numbers, buttons for
+PDF / abstract / BibTeX, Figure 1 and Figure 2 of the paper as an overlapping pair (no
+captions, click to enlarge) and the demo videos; videos load only for the slide on screen.
 The page is deliberately impersonal (no bio or contact details).
 
 ```
@@ -13,6 +14,8 @@ assets/js/main.js          slide engine: navigation, dialogs, IntersectionObserv
 assets/data/papers.js      ← ALL content lives here: cover/closing copy (SITE), paper order, metadata, captions
 assets/videos_web/*.mp4    web-optimized videos (H.264, yuv420p, ≤1280 px, +faststart)
 assets/posters/*.jpg       poster frames shown before a video is fetched
+assets/figures/*.jpg       Figure 1 and 2 of each paper, cut from the PDFs (no captions)
+tools/extract_figures.py   re-cuts the figures (needs PyMuPDF, see the file header)
 tools/optimize_videos.py   regenerates videos_web/ and posters/ from the paper folders
 tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading, dialogs, layout)
 <paper folders>/           original PDFs and source videos
@@ -23,12 +26,12 @@ tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading,
 | Action | Keys |
 |---|---|
 | Next / previous slide | `→` `↓` `Space` `PgDn` / `←` `↑` `PgUp` (clickers send these) |
-| Back to the cover | `Home` / `H`, or the **Home** button at the bottom right |
+| Back to the cover / contents | `Home` / `H`, or the **Home** button at the bottom right |
 | Last slide | `End` |
 | Jump to paper *n* | `1` … `9` |
-| Overview slide | `O` |
 | Fullscreen | `F` |
 | Abstract / BibTeX of the current paper | `A` / `B` |
+| Enlarge the paper's figures (← → flips between them) | `G`, or click a figure |
 | Play or pause the slide's main video | `V` |
 | Shortcut list | `?` |
 
@@ -56,7 +59,7 @@ optimized copies in `assets/videos_web/`, so you may exclude the raw videos
 
 ## Edit the copy
 
-`SITE` at the top of `assets/data/papers.js` holds the cover headline and intro (`hero`),
+`SITE` at the top of `assets/data/papers.js` holds the cover headline, intro and contents label (`hero`),
 the closing slide (`closing.points`, `closing.thanks`) and `showAuthors` (`false` by default:
 author lists stay in the data for BibTeX but are not displayed anywhere). The `<title>` and social-preview tags are at the top of
 `index.html`.
@@ -74,6 +77,9 @@ author lists stay in the data for BibTeX but are not displayed anywhere). The `<
    - `media.clips` → short demos, laid out automatically (portrait clips side by side,
      landscape clips stacked). `audio: true` adds an unmute button.
    - `highlights` → up to three key numbers; `tldr` → the one-paragraph pitch.
+   - `figures` → `[{src, w, h}]`, normally produced by `tools/extract_figures.py`
+     (add the paper to its `PAPERS` map; use `OVERRIDES` for a manual page/rectangle).
+     `assets/figures/manifest.json` lists the pixel sizes to copy.
 4. Fill in `links.arxiv` / `links.code` when available — buttons appear only when a link is set.
 
 ## Video loading policy (performance)

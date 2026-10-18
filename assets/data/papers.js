@@ -2,11 +2,12 @@
    papers.js — the single source of truth for the page.
 
    • Order of the array = order of the slides (one slide per paper).
-   • `topics` feed the cover statistics; `tags` are shown as keyword chips.
+   • `tags` are shown as keyword chips; `topics` are kept for optional filtering later.
    • `media.main`  = long overview / narrated video → native controls, no autoplay.
      `media.clips` = short demo loops → muted autoplay while the slide is on screen.
      `w`/`h` are the encoded pixel size (keeps the layout stable before loading),
      `duration` in seconds, `audio: true` adds an unmute button to a loop.
+   • `figures` = [{src, w, h}] — Figure 1 and 2 images, drawn overlapping above the video (no text).
    • `caption` may contain HTML; everything else is plain text.
    • Lines marked TODO are placeholders to confirm/fill in (also listed in README).
    ============================================================================= */
@@ -19,6 +20,7 @@ window.SITE = {
     eyebrow: 'Research highlights \u00b7 Robot skill learning',
     title: 'Robots need skills.',
     accent: 'This work helps them learn.',
+    contentsLabel: 'Contents \u00b7 click a paper to jump to it',
     intro: 'A robot is only as capable as the skills it can acquire \u2014 grasping an unfamiliar object, spinning a pen, unfolding a shirt, or picking up a trick a person just showed it. Every project here asks the same question: how can a robot learn such skills faster, more robustly and from fewer trials?',
   },
 
@@ -38,16 +40,6 @@ window.SITE = {
   // not on the slides, not in the abstract dialog. Set to true to show them again.
   showAuthors: false,
 
-  // Topic labels used for the cover statistics ("Real Robot" counts real-robot studies).
-  topics: [
-    'Grasping',
-    'Dexterous Manipulation',
-    'Reinforcement Learning',
-    'Imitation & Skill Transfer',
-    'Deformable Objects',
-    'Teleoperation',
-    'Real Robot',
-  ],
 };
 
 window.PAPERS = [
@@ -93,6 +85,11 @@ window.PAPERS = [
   address   = {Pittsburgh, PA, USA},
   year      = {2026}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/uniprototype-fig1.jpg', w: 502, h: 307 },
+      { src: 'assets/figures/uniprototype-fig2.jpg', w: 820, h: 449 },
+    ],
     media: {
       main: {
         kind: 'overview',
@@ -137,6 +134,11 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review at the 2027 IEEE International Conference on Robotics and Automation (ICRA)}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/pixelpoint-rl-fig1.jpg', w: 297, h: 243 },
+      { src: 'assets/figures/pixelpoint-rl-fig2.jpg', w: 940, h: 559 },
+    ],
     media: {
       main: {
         kind: 'overview',
@@ -181,6 +183,11 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review at the 2027 IEEE International Conference on Robotics and Automation (ICRA)}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/object-spin-fig1.jpg', w: 1001, h: 336 },
+      { src: 'assets/figures/object-spin-fig2.jpg', w: 454, h: 419 },
+    ],
     media: {
       main: {
         kind: 'overview',
@@ -225,6 +232,11 @@ window.PAPERS = [
   year   = {2026},
   note   = {Under review as a conference paper at ICLR 2027}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/cloth-unfold-fig1.jpg', w: 298, h: 377 },
+      { src: 'assets/figures/cloth-unfold-fig2.jpg', w: 802, h: 477 },
+    ],
     media: {
       main: {
         kind: 'overview',
@@ -274,6 +286,11 @@ window.PAPERS = [
   year    = {2026},
   note    = {Under review}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/physgrasp-fig1.jpg', w: 768, h: 308 },
+      { src: 'assets/figures/physgrasp-fig2.jpg', w: 1093, h: 326 },
+    ],
     media: {
       title: 'Real-robot demos',
       clips: [
@@ -332,6 +349,11 @@ window.PAPERS = [
   booktitle = {IEEE International Conference on Robotics and Automation (ICRA) Workshops},
   year      = {2025}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/tactile-grasp-fig1.jpg', w: 454, h: 256 },
+      { src: 'assets/figures/tactile-grasp-fig2.jpg', w: 233, h: 187 },
+    ],
     media: {
       title: 'Demos',
       clips: [
@@ -363,8 +385,8 @@ window.PAPERS = [
     shortTitle: 'Semi-Humanoid Teleoperation',
     navTitle: 'Teleoperation',
     title: 'Teleoperation of Semi-Humanoid for Construction with Underactuated Dexterous Hand',
-    venue: 'Talk · 2025',   // TODO: conference / venue name
-    venueFull: 'Presentation slides, 2025',   // TODO
+    venue: 'ICIR 2025',
+    venueFull: 'Presentation, IEEE 4th International Conference on Intelligent Reality (ICIR 2025), Boston, MA, USA, Nov 16\u201318, 2025',   // TODO: confirm (inferred from the last slide)
     year: 2025,
     status: { key: 'talk', label: 'Presentation' },
     authors: [
@@ -393,8 +415,13 @@ window.PAPERS = [
   title        = {Teleoperation of Semi-Humanoid for Construction with Underactuated Dexterous Hand},
   author       = {Hu, Xiao and Shi, Yangming and Ye, Yang},
   year         = {2025},
-  howpublished = {Presentation}
+  howpublished = {Presentation at the IEEE 4th International Conference on Intelligent Reality (ICIR), Boston, MA, USA}
 }`,
+    // Figure 1 and Figure 2 cut from the PDF (tools/extract_figures.py); shown as an overlapping pair, no captions
+    figures: [
+      { src: 'assets/figures/teleop-fig1.jpg', w: 1426, h: 675 },
+      { src: 'assets/figures/teleop-fig2.jpg', w: 986, h: 565 },
+    ],
     media: {
       title: 'Demo clips',
       clips: [

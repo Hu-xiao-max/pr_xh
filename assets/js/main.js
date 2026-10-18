@@ -1,10 +1,10 @@
 /* =============================================================================
    main.js — slide-deck engine for the research showcase.
 
-   Slides: cover → overview (table of contents) → one slide per paper → closing.
+   Slides: cover (with the table of contents) → one slide per paper → closing.
    • Navigation: ← → ↑ ↓ Space PgUp PgDn Home End, mouse wheel, touch swipe,
-     on-screen arrows, dots, Home button (Home / H), 1-9 jump to paper n, O overview, F fullscreen,
-     A abstract of the current paper, V play/pause its main video, ? help.
+     on-screen arrows, dots, Home button (Home / H), 1-9 jump to paper n, F fullscreen,
+     A abstract of the current paper, B its BibTeX, G its figures enlarged, V play/pause its main video, ? help.
    • URL hash (#/paper-id) deep-links to a slide.
    • Videos: created with preload="none" and no src. An IntersectionObserver
      attaches src/poster when a slide is next to the current one, autoplays
@@ -75,8 +75,6 @@
   }
   const thumbOf = (p) => p.thumb || (p.media && ((p.media.main && p.media.main.poster) ||
     (p.media.clips && p.media.clips[0] && p.media.clips[0].poster))) || '';
-  const nVideos = PAPERS.reduce((n, p) => n + ((p.media && p.media.main) ? 1 : 0) + ((p.media && p.media.clips) ? p.media.clips.length : 0), 0);
-  const nReal = PAPERS.filter((p) => (p.topics || []).includes('Real Robot')).length;
 
   /* ------------------------------------------------------------ templates */
   function authorsPlain(p) {
@@ -123,7 +121,8 @@
       '</figure>';
   }
 
-  function mediaHTML(p) {
+  function mediaHTML(p, opts) {
+    opts = opts || {};
     const m = p.media || {};
     const clips = m.clips || [];
     if (m.main) return '<div class="media-main">' + videoHTML(m.main, { main: true }) + '</div>';
@@ -131,11 +130,22 @@
     const n = clips.length;
     const portrait = clips.every((c) => (c.h || 0) > (c.w || 0));
     let cols, rows;
-    if (portrait) { cols = Math.min(n, 4); rows = Math.ceil(n / cols); }
+    if (opts.compact || portrait) { cols = Math.min(n, 3); rows = Math.ceil(n / cols); }   // side by side under the figures
     else if (n === 1) { cols = 1; rows = 1; }
     else if (n === 2) { cols = 1; rows = 2; }
     else { cols = 2; rows = Math.ceil(n / 2); }
     return '<div class="vgrid" style="--cols:' + cols + ';--rows:' + rows + '">' + clips.map((c) => videoHTML(c)).join('') + '</div>';
+  }
+
+  // Figure 1 + Figure 2 as an overlapping pair (no captions). Click = enlarge.
+  function figuresHTML(p) {
+    const figs = (p.figures || []).filter((f) => f && f.src).slice(0, 2);
+    if (!figs.length) return '';
+    return '<div class="figs figs-' + figs.length + '" role="group" aria-label="Figures">' + figs.map((f, i) => {
+      const w = f.w || 16, h = f.h || 9;
+      return '<button type="button" class="fig fig-' + (i + 1) + '" style="aspect-ratio:' + w + ' / ' + h + ';--ar:' + (w / h).toFixed(4) + '" data-fig="' + esc(p.id) + '" data-fig-index="' + i + '" aria-label="Enlarge figure ' + (i + 1) + '">' +
+        '<img src="' + esc(f.src) + '" alt="" decoding="async"></button>';
+    }).join('') + '</div>';
   }
 
   function btnHTML(href, label, icon, cls) {
@@ -144,37 +154,26 @@
 
   function coverHTML() {
     const h = SITE.hero || {};
-    const posters = PAPERS.map(thumbOf).filter(Boolean).slice(0, 6);
-    return '<section class="slide slide-cover" id="cover" aria-label="Title">' +
+    const items = PAPERS.map((p, i) =>
+      '<button type="button" class="toc-item" data-goto="' + esc(p.id) + '" aria-label="Go to ' + esc(p.shortTitle || p.title) + '">' +
+        '<span class="num">' + pad2(i + 1) + '</span>' +
+        (thumbOf(p) ? '<img src="' + esc(thumbOf(p)) + '" alt="" decoding="async">' : '<span class="toc-noimg"></span>') +
+        '<span class="toc-text"><span class="toc-title">' + esc(p.shortTitle || p.title) + '</span>' +
+        '<span class="toc-meta">' + esc(p.year) + (p.status ? ' \u00b7 ' + esc(p.status.label) : '') + '</span></span>' +
+        '<span class="badge venue">' + esc(p.venue) + '</span>' +
+      '</button>').join('');
+    return '<section class="slide slide-cover" id="cover" aria-label="Title and contents">' +
       '<div class="slide-inner"><div class="slide-content cover-grid">' +
         '<div class="cover-text">' +
           '<p class="eyebrow">' + esc(h.eyebrow || 'Research highlights') + '</p>' +
           '<h1>' + esc(h.title || 'Research highlights') + (h.accent ? ' <span>' + esc(h.accent) + '</span>' : '') + '</h1>' +
           '<p class="lede">' + esc(h.intro || '') + '</p>' +
-          '<div class="stats">' +
-            '<div class="stat"><b>' + PAPERS.length + '</b><span>papers</span></div>' +
-            '<div class="stat"><b>' + nVideos + '</b><span>demo videos</span></div>' +
-            '<div class="stat"><b>' + nReal + '</b><span>real-robot studies</span></div>' +
-          '</div>' +
-          '<p class="hint"><span>Press</span> <kbd>→</kbd> <span>or</span> <kbd>Space</kbd> <span>to begin (swipe on touch screens)</span><span>·</span><kbd>F</kbd> <span>fullscreen</span><span>·</span><kbd>?</kbd> <span>shortcuts</span></p>' +
+          '<p class="hint"><span>Click a paper, or press</span> <kbd>\u2192</kbd> <span>/</span> <kbd>Space</kbd> <span>to begin</span><span>\u00b7</span><kbd>F</kbd> <span>fullscreen</span><span>\u00b7</span><kbd>?</kbd> <span>shortcuts</span></p>' +
         '</div>' +
-        '<div class="cover-mosaic" aria-hidden="true">' + posters.map((src) => '<img src="' + esc(src) + '" alt="" decoding="async">').join('') + '</div>' +
-      '</div></div></section>';
-  }
-
-  function tocHTML() {
-    const cards = PAPERS.map((p, i) =>
-      '<button type="button" class="toc-card" data-goto="' + esc(p.id) + '">' +
-        '<div class="toc-thumb">' + (thumbOf(p) ? '<img src="' + esc(thumbOf(p)) + '" alt="" decoding="async">' : '') +
-        '<span class="toc-num">' + pad2(i + 1) + '</span></div>' +
-        '<div class="toc-body"><div><span class="badge venue">' + esc(p.venue) + '</span></div>' +
-        '<div class="toc-title">' + esc(p.shortTitle || p.title) + '</div>' +
-        '<div class="toc-meta">' + esc(p.year) + (p.status ? ' · ' + esc(p.status.label) : '') + '</div></div>' +
-      '</button>').join('');
-    return '<section class="slide slide-toc" id="overview" aria-label="Overview">' +
-      '<div class="slide-inner"><div class="slide-content">' +
-        '<header class="slide-head"><p class="eyebrow">Overview</p><h2>' + PAPERS.length + ' papers, ' + nVideos + ' demos — click any card to jump in</h2></header>' +
-        '<div class="toc-grid">' + cards + '</div>' +
+        '<nav class="toc" aria-label="Contents">' +
+          '<p class="section-label">' + esc(h.contentsLabel || 'Contents') + '</p>' +
+          '<div class="toc-list">' + items + '</div>' +
+        '</nav>' +
       '</div></div></section>';
   }
 
@@ -204,7 +203,10 @@
           '</div>' +
           (tags ? '<div class="tags">' + tags + '</div>' : '') +
         '</div>' +
-        '<div class="paper-media">' + mediaHTML(p) + '</div>' +
+        '<div class="paper-visual' + ((p.figures || []).length ? ' has-figs' : '') + '">' +
+          figuresHTML(p) +
+          '<div class="paper-media">' + mediaHTML(p, { compact: (p.figures || []).length > 0 }) + '</div>' +
+        '</div>' +
       '</div></div></section>';
   }
 
@@ -228,7 +230,7 @@
   const track = () => $('#track');
 
   function buildDeck() {
-    track().innerHTML = coverHTML() + tocHTML() + PAPERS.map(paperSlideHTML).join('') + endHTML();
+    track().innerHTML = coverHTML() + PAPERS.map(paperSlideHTML).join('') + endHTML();
     deck.slides = $$('.slide', track());
     deck.ids = deck.slides.map((s) => s.id);
     $('#dots').innerHTML = deck.slides.map((s, i) =>
@@ -281,6 +283,22 @@
       '<h4>' + esc(p.abstractLabel || 'Abstract') + '</h4><p>' + esc(p.abstract || '') + '</p>' +
       ((p.tags || []).length ? '<h4>Keywords</h4><p>' + p.tags.map(esc).join(' · ') + '</p>' : '');
     openDialog(d);
+  }
+
+  const lightbox = { figs: [], index: 0 };
+  function showFig(i) {
+    if (!lightbox.figs.length) return;
+    lightbox.index = (i + lightbox.figs.length) % lightbox.figs.length;
+    const f = lightbox.figs[lightbox.index];
+    const img = $('#fig-img');
+    img.src = f.src; img.alt = 'Figure ' + (lightbox.index + 1);
+    $('#fig-counter').textContent = 'Figure ' + (lightbox.index + 1) + ' / ' + lightbox.figs.length;
+  }
+  function openFigures(p, i) {
+    if (!p || !(p.figures || []).length) return;
+    lightbox.figs = p.figures.filter((f) => f && f.src).slice(0, 2);
+    showFig(i || 0);
+    openDialog($('#fig-dialog'));
   }
 
   let currentBibtex = '';
@@ -412,6 +430,10 @@
       if (t.closest('#home')) { goTo(0); return; }
       if (t.closest('#fs')) { toggleFullscreen(); return; }
       if (t.closest('#help-btn')) { openDialog($('#help-dialog')); return; }
+      const fig = t.closest('[data-fig]');
+      if (fig) { openFigures(PAPERS.find((p) => p.id === fig.dataset.fig), +fig.dataset.figIndex || 0); return; }
+      if (t.closest('[data-fig-prev]')) { showFig(lightbox.index - 1); return; }
+      if (t.closest('[data-fig-next]')) { showFig(lightbox.index + 1); return; }
       const abs = t.closest('[data-abstract]');
       if (abs) { openAbstract(PAPERS.find((p) => p.id === abs.dataset.abstract)); return; }
       const bib = t.closest('[data-bibtex]');
@@ -427,6 +449,11 @@
     // Keyboard
     window.addEventListener('keydown', (ev) => {
       if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      const figDlg = $('#fig-dialog');
+      if (figDlg && figDlg.open) {                             // ← → flip between the two figures
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); showFig(lightbox.index + (ev.key === 'ArrowRight' ? 1 : -1)); }
+        return;
+      }
       if (dialogOpen()) return;                               // Esc is handled by <dialog> itself
       const tag = (ev.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || ev.target.isContentEditable) return;
@@ -441,9 +468,9 @@
         case 'End': ev.preventDefault(); goTo(deck.slides.length - 1); return;
         case 'h': case 'H': goTo(0); return;
         case 'f': case 'F': toggleFullscreen(); return;
-        case 'o': case 'O': goToId('overview'); return;
         case 'a': case 'A': openAbstract(currentPaper()); return;
         case 'b': case 'B': openBibtex(currentPaper()); return;
+        case 'g': case 'G': openFigures(currentPaper(), 0); return;
         case 'v': case 'V': toggleMainVideo(); return;
         case '?': openDialog($('#help-dialog')); return;
         default:

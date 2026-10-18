@@ -7,7 +7,7 @@
 //       --autoplay-policy=no-user-gesture-required about:blank &
 //   node tools/test_page.mjs            # CDP_PORT=9223 to use another port
 //
-// Checks slide generation, keyboard / wheel / hash navigation, dialogs, that videos are
+// Checks slide generation (cover with contents, one slide per paper, closing), keyboard / wheel / hash navigation, dialogs, that videos are
 // only attached on the current and neighbouring slides, autoplay + pause-on-leave,
 // that every slide fits a 1280x720 projector without scrolling, and the phone layout.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -41,20 +41,22 @@ await sleep(1800);
 const nPapers = await ev('window.PAPERS.length');
 
 console.log('Deck');
-check('slides = papers + cover + overview + end', (await ev('document.querySelectorAll(".slide").length')) === nPapers + 3);
+check('slides = papers + cover + end', (await ev('document.querySelectorAll(".slide").length')) === nPapers + 2);
+check('cover lists every paper in its contents', (await ev('document.querySelectorAll("#cover .toc-item").length')) === nPapers);
+check('cover shows no statistics block', (await ev('document.querySelectorAll("#cover .stats, #cover .stat").length')) === 0);
 check('starts on the cover', (await active()) === 'cover');
-check('counter shows 1 / N', (await ev('document.getElementById("current").textContent + "/" + document.getElementById("total").textContent')) === `1/${nPapers + 3}`);
-check('inactive slides are inert', (await ev('document.querySelectorAll(".slide[inert]").length')) === nPapers + 2);
-check('no video has a src on the cover', (await ev('[...document.querySelectorAll("video")].filter(v=>v.getAttribute("src")).length')) === 0);
+check('counter shows 1 / N', (await ev('document.getElementById("current").textContent + "/" + document.getElementById("total").textContent')) === `1/${nPapers + 2}`);
+check('inactive slides are inert', (await ev('document.querySelectorAll(".slide[inert]").length')) === nPapers + 1);
+check('on the cover only the neighbouring first paper has its video src pre-attached, nothing plays',
+  (await ev('[...document.querySelectorAll("video")].filter(v=>v.getAttribute("src")).every(v=>v.closest(".slide").id===window.PAPERS[0].id)')) &&
+  (await ev('[...document.querySelectorAll("video")].every(v=>v.paused)')));
 check('no author line anywhere on the slides', (await ev('document.querySelectorAll(".authors, .authors-anon").length')) === 0);
 check('Home button is disabled on the cover', await ev('document.getElementById("home").disabled'));
 
 console.log('Keyboard navigation');
-await key('ArrowRight'); await sleep(300);
-check('→ goes to the overview', (await active()) === 'overview');
-await key('ArrowRight'); await sleep(1200);
 const firstId = await ev('window.PAPERS[0].id');
-check('→ goes to the first paper', (await active()) === firstId);
+await key('ArrowRight'); await sleep(1200);
+check('→ goes straight to the first paper', (await active()) === firstId);
 check('hash follows the slide', (await ev('location.hash')) === '#/' + firstId);
 check('progress bar advanced', parseFloat(await ev('document.getElementById("progress").style.width')) > 20);
 check('current slide video has src, next slide too, two slides away not yet',
@@ -83,13 +85,14 @@ await key('End'); await sleep(300);
 await key('Home'); await sleep(300);
 check('Home goes back to the cover', (await active()) === 'cover');
 
-console.log('Wheel, hash, overview cards');
+console.log('Wheel, hash, contents');
 await ev('window.dispatchEvent(new WheelEvent("wheel", {deltaY: 120, bubbles: true})); true'); await sleep(300);
-check('wheel down advances one slide', (await active()) === 'overview');
+check('wheel down advances one slide', (await active()) === firstId);
 await ev('window.dispatchEvent(new WheelEvent("wheel", {deltaY: 120, bubbles: true})); true'); await sleep(100);
-check('a second wheel event within the lock window is ignored', (await active()) === 'overview');
-await ev('document.querySelector(".toc-card[data-goto=teleop]").click()'); await sleep(1800);
-check('overview card jumps to its paper', (await active()) === 'teleop');
+check('a second wheel event within the lock window is ignored', (await active()) === firstId);
+await key('Home'); await sleep(300);
+await ev('document.querySelector("#cover .toc-item[data-goto=teleop]").click()'); await sleep(1800);
+check('a contents entry on the cover jumps to its paper', (await active()) === 'teleop');
 const tele = await ev('[...document.querySelectorAll("#teleop video")].map(v=>{const r=v.getBoundingClientRect();return {paused:v.paused,w:Math.round(r.width),h:Math.round(r.height),right:Math.round(r.right),bottom:Math.round(r.bottom)}})');
 check('three portrait clips play side by side inside the viewport', tele.length === 3 && tele.every((t) => !t.paused && t.h > t.w && t.right <= 1280 && t.bottom <= 720), JSON.stringify(tele));
 await ev('location.hash = "#/object-spin"'); await sleep(900);
@@ -114,6 +117,22 @@ await key('?'); await sleep(200);
 check('? opens the help dialog', await ev('document.getElementById("help-dialog").open'));
 await ev('document.querySelector("#help-dialog [data-close-dialog]").click()'); await sleep(200);
 
+console.log('Figures');
+check('every paper slide shows two figures', await ev('[...document.querySelectorAll(".slide-paper")].every(s=>s.querySelectorAll(".figs .fig img").length===2)'));
+await ev(`location.hash = '#/${firstId}'`); await sleep(1500);
+check('figure images are loaded on the active slide', await ev('[...document.querySelectorAll(".slide.is-active .fig img")].every(i=>i.complete&&i.naturalWidth>0)'));
+check('the two figures overlap (collage)', await ev('(() => { const [a,b] = [...document.querySelectorAll(".slide.is-active .fig")].map(e=>e.getBoundingClientRect()); return !!(a && b) && Math.min(a.right,b.right) - Math.max(a.left,b.left) > 0 && Math.min(a.bottom,b.bottom) - Math.max(a.top,b.top) > 0; })()'));
+check('figures sit above the video inside the visual column', await ev('(() => { const f = document.querySelector(".slide.is-active .figs").getBoundingClientRect(); const v = document.querySelector(".slide.is-active .paper-media").getBoundingClientRect(); return f.bottom <= v.top + 1; })()'));
+await ev('document.querySelector(".slide.is-active .fig-1").click()'); await sleep(300);
+check('clicking a figure opens the lightbox on figure 1', (await ev('document.getElementById("fig-dialog").open')) && (await ev('document.getElementById("fig-img").getAttribute("src")')).endsWith('-fig1.jpg'));
+await key('ArrowRight'); await sleep(150);
+check('→ inside the lightbox shows figure 2 and does not change the slide', (await ev('document.getElementById("fig-img").getAttribute("src")')).endsWith('-fig2.jpg') && (await active()) === firstId);
+await ev('document.querySelector("#fig-dialog [data-close-dialog]").click()'); await sleep(200);
+check('lightbox closes', !(await ev('document.getElementById("fig-dialog").open')));
+await key('g'); await sleep(200);
+check('G opens the lightbox', await ev('document.getElementById("fig-dialog").open'));
+await ev('document.querySelector("#fig-dialog [data-close-dialog]").click()'); await sleep(200);
+
 console.log('Every slide fits a 1280x720 projector');
 const ids = await ev('[...document.querySelectorAll(".slide")].map(s=>s.id)');
 for (const sid of ids) {
@@ -125,7 +144,7 @@ for (const sid of ids) {
 console.log('Phone layout (390x844)');
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await sleep(600);
-for (const sid of ['cover', 'overview', firstId, 'teleop', 'end']) {
+for (const sid of ['cover', firstId, 'teleop', 'end']) {
   await ev(`location.hash = '#/${sid}'`); await sleep(900);
   const maxRight = await ev('Math.max(...[...document.querySelector(".slide.is-active").querySelectorAll("*")].map(e=>e.getBoundingClientRect().right))');
   check(`${sid}: nothing extends past the phone's right edge`, maxRight <= 391, String(maxRight));
