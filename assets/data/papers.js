@@ -25,6 +25,12 @@
 window.SITE = {
   pageTitle: 'Research Highlights',
 
+  // How slides can be changed. The bottom buttons, the dots, the contents list and the Home button
+  // always work. Wheel and swipe are off so that scrubbing a video's progress bar never flips the
+  // slide; `keys` keeps ← → PgUp PgDn Space Home End (presentation clickers send these) and the
+  // digit shortcuts — arrows are ignored while a video has focus, so they seek the video instead.
+  navigation: { keys: true, wheel: false, swipe: false },
+
   // Cover slide copy. Plain text; `accent` is the grey second half of the headline.
   hero: {
     eyebrow: 'Research highlights \u00b7 Robot skill learning',

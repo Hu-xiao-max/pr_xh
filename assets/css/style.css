@@ -135,6 +135,15 @@ kbd {
 }
 .toc-meta { font-size: clamp(.64rem, .74vw, .76rem); color: var(--muted); font-weight: 500; }
 .toc-item .badge { justify-self: end; }
+/* 8 or more papers: tighter rows (main.js adds .toc-dense) so the cover still fits a 1280x720 projector;
+   10 or more: two columns (.toc-two) */
+.toc-list.toc-dense { gap: clamp(4px, .5vw, 6px); }
+.toc-list.toc-dense .toc-item { padding-top: clamp(.25rem, .38vw, .35rem); padding-bottom: clamp(.25rem, .38vw, .35rem); }
+.toc-list.toc-dense .toc-item img, .toc-list.toc-dense .toc-noimg { width: clamp(64px, 6vw, 100px); }
+.toc-list.toc-dense .toc-title { font-size: clamp(.8rem, .95vw, 1rem); }
+.toc-list.toc-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.toc-list.toc-two .toc-item { grid-template-columns: auto auto minmax(0, 1fr); }
+.toc-list.toc-two .toc-item .badge { display: none; }
 
 /* ---------- Shared slide header (closing slide) ---------- */
 .slide-head { margin-bottom: clamp(.8rem, 1.6vw, 1.6rem); }
@@ -367,6 +376,7 @@ dialog.lightbox { background: transparent; box-shadow: none; max-width: 96vw; wi
   .cell.cell-tall { grid-column: span 1 !important; }
   .inline-wide, .text-video .vframe { width: 100%; }
   .toc-item .badge { display: none; }
+  .toc-list.toc-two { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
   :root { --hud-h: 52px; }

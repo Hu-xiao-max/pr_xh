@@ -2,8 +2,10 @@
    main.js — slide-deck engine for the research showcase.
 
    Slides: cover (with the table of contents) → one slide per paper → closing.
-   • Navigation: ← → ↑ ↓ Space PgUp PgDn Home End, mouse wheel, touch swipe,
-     on-screen arrows, dots, Home button (Home / H), 1-9 jump to paper n, F fullscreen,
+   • Navigation: the bottom buttons, dots, contents and Home button; keyboard / clicker keys
+     (← → ↑ ↓ Space PgUp PgDn Home End, 1-9 jump to paper n) unless SITE.navigation.keys is false.
+     Wheel and swipe navigation are opt-in (SITE.navigation) so video scrubbing never flips slides.
+     F fullscreen,
      A abstract of the current paper, B its BibTeX, G its images enlarged, V play/pause its first video, ? help.
    • URL hash (#/paper-id) deep-links to a slide.
    • Videos: created with preload="none" and no src. An IntersectionObserver
@@ -218,7 +220,8 @@
         '</div>' +
         '<nav class="toc" aria-label="Contents">' +
           '<p class="section-label">' + esc(h.contentsLabel || 'Contents') + '</p>' +
-          '<div class="toc-list">' + items + '</div>' +
+          // 8+ papers: tighter rows; 10+: two columns — keeps the cover inside a 1280x720 projector (style.css)
+          '<div class="toc-list' + (PAPERS.length >= 8 ? ' toc-dense' : '') + (PAPERS.length >= 10 ? ' toc-two' : '') + '">' + items + '</div>' +
         '</nav>' +
       '</div></div></section>';
   }
@@ -511,6 +514,8 @@
       if (t.tagName === 'DIALOG') closeDialog(t);          // click on the backdrop
     });
 
+    const NAV = Object.assign({ keys: true, wheel: false, swipe: false }, SITE.navigation || {});
+
     // Keyboard
     window.addEventListener('keydown', (ev) => {
       if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
@@ -522,9 +527,12 @@
       if (dialogOpen()) return;                               // Esc is handled by <dialog> itself
       const tag = (ev.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || ev.target.isContentEditable) return;
-      const onControl = tag === 'button' || tag === 'a' || tag === 'video' || tag === 'summary';
+      if (tag === 'video' || (ev.target.closest && ev.target.closest('.vframe'))) return;   // a focused video keeps its own keys (seek, play)
+      const onControl = tag === 'button' || tag === 'a' || tag === 'summary';
       const k = ev.key;
-      if ((k === ' ' || k === 'Enter') && onControl) return;  // let buttons/links/video controls work
+      if ((k === ' ' || k === 'Enter') && onControl) return;  // let buttons and links work
+      const navKey = /^(ArrowRight|ArrowDown|PageDown|Enter| |ArrowLeft|ArrowUp|PageUp|Backspace|Home|End|[1-9])$/.test(k);
+      if (navKey && !NAV.keys) return;                          // keyboard navigation switched off in SITE.navigation
       switch (k) {
         case 'ArrowRight': case 'ArrowDown': case 'PageDown': case 'Enter': ev.preventDefault(); go(1); return;
         case ' ': ev.preventDefault(); go(ev.shiftKey ? -1 : 1); return;
@@ -544,8 +552,9 @@
     });
 
     // Mouse wheel / trackpad: one slide per gesture, but let an overflowing slide scroll first.
+    // Off by default (SITE.navigation.wheel) so that scrubbing a video never changes the slide.
     let wheelLock = 0;
-    window.addEventListener('wheel', (ev) => {
+    if (NAV.wheel) window.addEventListener('wheel', (ev) => {
       if (dialogOpen()) return;
       const scroller = ev.target.closest && ev.target.closest('.slide-inner');
       if (scroller && scroller.scrollHeight > scroller.clientHeight + 2) {
@@ -561,10 +570,11 @@
       go(d > 0 ? 1 : -1);
     }, { passive: true });
 
-    // Touch swipe (horizontal)
+    // Touch swipe (horizontal). Off by default (SITE.navigation.swipe): dragging a video's progress
+    // bar is a horizontal swipe too, and it used to flip the slide.
     let tx = 0, ty = 0, t0 = 0;
-    window.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; tx = t.clientX; ty = t.clientY; t0 = Date.now(); }, { passive: true });
-    window.addEventListener('touchend', (ev) => {
+    if (NAV.swipe) window.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; tx = t.clientX; ty = t.clientY; t0 = Date.now(); }, { passive: true });
+    if (NAV.swipe) window.addEventListener('touchend', (ev) => {
       if (dialogOpen()) return;
       const t = ev.changedTouches[0];
       const dx = t.clientX - tx, dy = t.clientY - ty;

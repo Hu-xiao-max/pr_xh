@@ -95,7 +95,15 @@ def main() -> int:
             manifest.setdefault(slug, []).append({"src": str(dst.relative_to(ROOT)), "w": w, "h": h,
                                                   "from": str(f.relative_to(ROOT))})
             print(f"{str(f.relative_to(ROOT)):55} {f.stat().st_size / 1024:7.0f} KB -> {dst.name:40} {w}x{h} {dst.stat().st_size / 1024:5.0f} KB")
-    (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    # keep entries of earlier runs whose outputs still exist (sources may have been removed)
+    mf = OUT_DIR / "manifest.json"
+    if mf.exists():
+        for slug, items in json.load(mf.open()).items():
+            if slug not in manifest:
+                kept = [it for it in items if (ROOT / it["src"]).exists()]
+                if kept:
+                    manifest[slug] = kept
+    mf.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"\n{sum(len(v) for v in manifest.values())} images -> {OUT_DIR.relative_to(ROOT)}/ (manifest.json lists the sizes)")
     return 0
 

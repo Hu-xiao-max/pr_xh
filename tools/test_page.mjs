@@ -59,7 +59,7 @@ const firstId = await ev('window.PAPERS[0].id');
 await key('ArrowRight'); await sleep(1200);
 check('→ goes straight to the first paper', (await active()) === firstId);
 check('hash follows the slide', (await ev('location.hash')) === '#/' + firstId);
-check('progress bar advanced', parseFloat(await ev('document.getElementById("progress").style.width')) > 20);
+check('progress bar shows slide 2 of N', Math.abs(parseFloat(await ev('document.getElementById("progress").style.width')) - 200 / (nPapers + 2)) < 0.01);
 check('current slide video has src, next slide too, two slides away not yet',
   (await ev(`!!document.querySelector("#${firstId} video").getAttribute("src")`)) &&
   (await ev('!!document.querySelector("#" + window.PAPERS[1].id + " video").getAttribute("src")')) &&
@@ -69,12 +69,15 @@ await key(' '); await sleep(300);
 check('Space goes forward', (await active()) === await ev('window.PAPERS[1].id'));
 await key(' ', ', shiftKey: true'); await sleep(300);
 check('Shift+Space goes back', (await active()) === firstId);
-await key('5'); await sleep(1800);
-check('digit 5 jumps to paper 5', (await active()) === await ev('window.PAPERS[4].id'));
-const clips = await ev('[...document.querySelectorAll(".slide.is-active video")].map(v=>({src:!!v.getAttribute("src"),paused:v.paused,muted:v.muted,poster:!!v.poster}))');
+// the first paper with autoplay loop clips (its position shifts when a paper is inserted before it)
+const clipIdx = await ev('window.PAPERS.findIndex(p => p.media && p.media.clips && p.media.clips.length)');
+const clipDigit = String(clipIdx + 1);
+await key(clipDigit); await sleep(1800);
+check(`digit ${clipDigit} jumps to paper ${clipDigit}`, (await active()) === await ev(`window.PAPERS[${clipIdx}].id`));
+const clips = await ev('[...document.querySelectorAll(".slide.is-active video[data-autoplay]")].map(v=>({src:!!v.getAttribute("src"),paused:v.paused,muted:v.muted,poster:!!v.poster}))');
 check('loop clips on the active slide autoplay muted with poster', clips.length > 0 && clips.every((c) => c.src && !c.paused && c.muted && c.poster), JSON.stringify(clips));
 await key('ArrowLeft'); await sleep(1300);
-check('← leaves the slide and its clips pause', await ev('[...document.querySelectorAll("#" + window.PAPERS[4].id + " video")].every(v=>v.paused)'));
+check('← leaves the slide and its clips pause', await ev(`[...document.querySelectorAll("#" + window.PAPERS[${clipIdx}].id + " video")].every(v=>v.paused)`));
 await key('End'); await sleep(300);
 check('End goes to the closing slide', (await active()) === 'end');
 check('Home button is enabled away from the cover', !(await ev('document.getElementById("home").disabled')));
@@ -88,9 +91,15 @@ check('Home goes back to the cover', (await active()) === 'cover');
 
 console.log('Wheel, hash, contents');
 await ev('window.dispatchEvent(new WheelEvent("wheel", {deltaY: 120, bubbles: true})); true'); await sleep(300);
-check('wheel down advances one slide', (await active()) === firstId);
-await ev('window.dispatchEvent(new WheelEvent("wheel", {deltaY: 120, bubbles: true})); true'); await sleep(100);
-check('a second wheel event within the lock window is ignored', (await active()) === firstId);
+check('wheel does not change the slide (video scrubbing must not flip pages)', (await active()) === 'cover');
+check('no swipe handlers are installed by default', (await ev('(window.SITE.navigation || {}).swipe')) !== true);
+await key('ArrowRight'); await sleep(800);
+await ev('(() => { const v = document.querySelector(".slide.is-active video"); v.setAttribute("tabindex", "0"); v.focus(); v.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowRight", bubbles: true, cancelable: true})); return true; })()'); await sleep(300);
+check('arrow keys are ignored while a video has focus (they seek the video instead)', (await active()) === firstId);
+await ev('document.getElementById("next").click()'); await sleep(300);
+check('the bottom Next button advances one slide', (await active()) === await ev('window.PAPERS[1].id'));
+await ev('document.getElementById("prev").click()'); await sleep(300);
+check('the bottom Prev button goes back', (await active()) === firstId);
 await key('Home'); await sleep(300);
 await ev('document.querySelector("#cover .toc-item[data-goto=teleop]").click()'); await sleep(1800);
 check('a contents entry on the cover jumps to its paper', (await active()) === 'teleop');
@@ -127,8 +136,8 @@ check('no submission-status text anywhere in the deck', !/Under review|Accepted|
 check('no conference names anywhere in the deck', !/IROS|ICRA|ICLR|ICIR|Advanced Robotics Research|Workshop|Wiley/.test(await ev('document.getElementById("track").textContent')) && (await ev('document.querySelectorAll(".track .badge.venue").length')) === 0);
 check('no venue or year badges remain on the slides', (await ev('document.querySelectorAll(".slide-paper .badge, #cover .badge, #end .badge").length')) === 0 && !/\b20(2[5-9])\b/.test(await ev('[...document.querySelectorAll(".slide-paper .badges, #cover .toc-list")].map(e=>e.textContent).join(" ")')));
 check('every paper slide puts the text band above a full-width board', await ev('window.PAPERS.every(p => { const s = document.getElementById(p.id); const t = s.querySelector(".paper-text").getBoundingClientRect(); const b = s.querySelector(".board").getBoundingClientRect(); const c = s.querySelector(".slide-content").getBoundingClientRect(); return t.bottom <= b.top + 1 && b.width >= c.width * .98 && b.height >= c.height * .55; })'));
-check('01: image on the left, video on the right', await ev('(() => { const im = document.querySelector("#uniprototype .board .cell-img").getBoundingClientRect(); const v = document.querySelector("#uniprototype .board .cell-video").getBoundingClientRect(); return im.right <= v.left + 1 && Math.abs(im.top - v.top) < 2; })()'));
-check('05: figure spans both rows on the left, clips stacked on the right', await ev('(() => { const im = document.querySelector("#physgrasp .board .cell-img").getBoundingClientRect(); const vs = [...document.querySelectorAll("#physgrasp .board .cell-video")].map(e => e.getBoundingClientRect()); return vs.length === 2 && vs.every(v => v.left > im.right) && vs[1].top > vs[0].bottom && im.height > vs[0].height * 1.8; })()'));
+check('uniprototype: image on the left, video on the right', await ev('(() => { const im = document.querySelector("#uniprototype .board .cell-img").getBoundingClientRect(); const v = document.querySelector("#uniprototype .board .cell-video").getBoundingClientRect(); return im.right <= v.left + 1 && Math.abs(im.top - v.top) < 2; })()'));
+check('physgrasp: figure spans both rows on the left, clips stacked on the right', await ev('(() => { const im = document.querySelector("#physgrasp .board .cell-img").getBoundingClientRect(); const vs = [...document.querySelectorAll("#physgrasp .board .cell-video")].map(e => e.getBoundingClientRect()); return vs.length === 2 && vs.every(v => v.left > im.right) && vs[1].top > vs[0].bottom && im.height > vs[0].height * 1.8; })()'));
 await sleep(600);
 const legible = await ev('(() => { const out = []; document.querySelectorAll(".slide-paper [data-gallery] img").forEach(img => { const b = img.getBoundingClientRect(); const ar = img.naturalWidth / Math.max(1, img.naturalHeight); const w = Math.min(b.width, b.height * ar), h = w / ar; out.push({ id: img.closest(".slide").id, src: img.getAttribute("src").split("/").pop(), w: Math.round(w), h: Math.round(h) }); }); return out; })()');
 const nImages = await ev('window.PAPERS.reduce((n,p)=>n+(p.gallery||[]).length,0)');

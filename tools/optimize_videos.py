@@ -219,7 +219,7 @@ def emit_js(slug: str) -> int:
     clips = [k for k in items if k != main]
     out = ["    media: {"]
     if main:
-        out.append("      main:\n" + js(main, items[main], "overview").replace("      {", "      {", 1) + ",")
+        out.append("      main: " + js(main, items[main], "overview").lstrip() + ",")
     if clips:
         out.append("      clips: [\n" + ",\n".join(js(k, items[k], "loop") for k in clips) + "\n      ],")
     out.append("    },")
@@ -284,7 +284,13 @@ def main() -> int:
         print(f"   {p['meta']['size'] / 1048576:6.1f} MB -> {out['size'] / 1048576:5.1f} MB  "
               f"{out['width']}x{out['height']}  audio={'yes' if out['has_audio'] else 'no'}", flush=True)
 
-    (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    # keep entries of earlier runs whose outputs still exist (raw sources are git-ignored and may be absent)
+    mf = OUT_DIR / "manifest.json"
+    if mf.exists():
+        for k, v in json.load(mf.open()).items():
+            if k not in manifest and (ROOT / v["file"]).exists():
+                manifest[k] = v
+    mf.write_text(json.dumps(manifest, indent=2) + "\n")
     total_in = sum(p["meta"]["size"] for p in plans) / 1048576
     total_out = sum(v["size_mb"] for v in manifest.values())
     print(f"\nDone. {len(plans)} videos: {total_in:.1f} MB -> {total_out:.1f} MB. "

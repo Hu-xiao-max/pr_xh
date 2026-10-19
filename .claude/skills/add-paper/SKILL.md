@@ -54,11 +54,16 @@ These came from several rounds of feedback; breaking them is the main way to dis
 
 ### 1. Find what is new
 
-`git status --short` and `ls` the paper folders; compare with the `id`s in papers.js and the
-keys in the two manifests. New folder → new paper. New files in an existing folder → update that
-paper's `gallery` / `media`. Pick a short kebab-case slug from the paper's theme (e.g.
-`pour-tactile`) and add `"<folder>": "<slug>"` to the `SLUGS` map in **both** optimizer scripts
-so output files get stable names.
+`git status --short` (or plain `ls` if the directory is not a git checkout) and compare the
+paper folders with the `id`s in papers.js and the keys in the two manifests. New folder → new
+paper. New files in an existing folder → update that paper's `gallery` / `media`. Pick a short
+kebab-case slug from the paper's theme (e.g. `pour-tactile`) and add `"<folder>": "<slug>"` to
+the `SLUGS` map in **both** optimizer scripts so output files get stable names.
+
+If the folder's media clearly belong to another project (a video that shows a different robot
+or task than the paper describes), do not invent a story: describe what is actually visible in
+the label/caption, mark it `// TODO`, and say so prominently in the report — the owner may have
+dropped placeholder files.
 
 ### 2. Read the PDF
 
@@ -88,9 +93,16 @@ digitally silent audio is dropped. Decide `kind` per video: a narrated or long o
 `clips` (`kind: 'loop'`: muted autoplay while the slide is on screen). Replace the TODO labels
 (short, 1–3 words, shown on the video) and captions (one sentence, used as a tooltip). Keep
 `audio: true` only if the track is narration; ambient noise just gets an unmute button nobody
-wants. If the poster frame is a black or title card, set a better timestamp in `POSTER_AT` and
-run `--posters`. To judge a video's content quickly, tile a few frames with ffmpeg and look at
-the image with the Read tool.
+wants. You cannot listen, so measure: compare `ffmpeg -i v.mp4 -af volumedetect -f null -` with
+the same on a speech band (`-af "highpass=f=300,lowpass=f=3400,volumedetect"`) — narration keeps
+most of its energy in the band and `silencedetect` shows pauses; motor hum does not. If the
+poster frame is a black or title card, set a better timestamp in `POSTER_AT` and run
+`--posters`. To judge a video's content quickly, tile a few frames with ffmpeg (build the
+filter string in Python, see Pitfalls) and look at the image with the Read tool.
+
+The scripts rebuild `manifest.json` from the sources they find and merge in earlier entries whose
+outputs still exist, so running them with some raw sources missing (they are git-ignored) is
+safe; `--js` works for any slug that has converted files.
 
 ### 4. Images
 
@@ -108,7 +120,10 @@ say so in the report.
 Copy the template from `references/paper-entry.md`, paste the `--js` outputs, write the text,
 and choose `layout.board` with the cookbook. Insert the entry where it belongs in the PAPERS
 array (newest or most important first is the current convention) — the cover contents, digit
-shortcuts and closing list update themselves. Then `node --check assets/data/papers.js`.
+shortcuts and closing list update themselves. The cover's contents list fits 7 papers at
+1280×720; from 8 it switches itself to tighter rows and from 10 to two columns, so check the
+cover screenshot whenever the count crosses one of those marks. Then
+`node --check assets/data/papers.js`.
 
 ### 6. Verify — never skip
 
@@ -129,8 +144,11 @@ Wait a second after launching Chrome before running a script (otherwise `window.
 exist yet). Then **look at the screenshots with the Read tool** and at the printed numbers:
 `overflow` must be 0, `bullets` 3 (or however many you wrote), `images` all ≥ 300 px wide or
 260 px tall, nothing clipped, text band above the board. Fix by changing `rows`/`cols`, moving
-an item, or shortening a bullet — not by shrinking images. The test must end with `0 failed`;
-if an assertion fails only because of an intentional layout change, update that assertion.
+an item, or shortening a bullet — not by shrinking images. The test must end with `0 failed`.
+Its assertions are written to be independent of the number and order of papers (they find the
+first paper with loop clips, compute the progress bar from N, and address existing papers by
+id); if one still fails only because of an intentional layout change, update that assertion.
+Also capture the cover (`"cover"`) when you changed the paper count.
 
 ### 7. Report
 

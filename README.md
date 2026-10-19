@@ -2,7 +2,9 @@
 
 A static, build-free presentation page: cover (opening text + clickable table of contents)
 → one slide per paper → closing. Open it in a browser, press **F** for fullscreen and present
-with the keyboard, a clicker, the mouse wheel or touch swipes. Each paper slide is mostly visual: a text band on top (title, 2–3 bullets, buttons for
+with the buttons at the bottom, a clicker or the keyboard (wheel and swipe navigation are off by
+default so that scrubbing a video never changes the slide; `SITE.navigation` in papers.js turns
+them on or the keyboard off). Each paper slide is mostly visual: a text band on top (title, 2–3 bullets, buttons for
 PDF / abstract / BibTeX) and, below it, a full-width board of images and demo videos. The text always
 comes first, on phones as well, where the board becomes one item per row at its own aspect ratio
 (portrait clips are paired). Every paper has its own board composition (`layout` in papers.js),

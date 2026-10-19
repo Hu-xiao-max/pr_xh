@@ -70,6 +70,7 @@ drawn size of each image (min(cell width, cell height × aspect)) and keep it �
 | 1 wide image + 2 short clips | `cols: '2fr 1fr', rows: 2`, cells: image `rowSpan: 2`, clip, clip (stacked) | Physics Grasp |
 | strip (≥3:1) + portrait photo + 2 clips | `cols: '1.1fr 1.45fr 1.45fr', rows: '1fr 1.5fr'`, cells: portrait `rowSpan: 2`, strip `span: 2`, clip, clip | Tactile Grasping |
 | only portrait phone clips | `cols: <count>, rows: 1` | Teleoperation |
+| 1 wide image + 1 portrait image + 1 overview video + 1 clip | `cols: '1.8fr 1fr 1fr', rows: 2`, cells: wide `rowSpan: 2`, portrait `rowSpan: 2`, video, clip (videos stacked in the third column) | test run "pour" |
 | 2 wide images + 1 video | `cols: '1fr 1fr 1fr', rows: 1` or `cols: 2, rows: 2` with the video `span: 2` on the second row | — |
 | 1 image only, no video | `cols: 1, rows: 1` | — |
 
