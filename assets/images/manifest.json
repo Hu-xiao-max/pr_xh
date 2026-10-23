@@ -64,5 +64,19 @@
       "h": 776,
       "from": "wrench_spin/wrench_pipeline.png"
     }
+  ],
+  "xiaowu": [
+    {
+      "src": "assets/images/xiaowu-carry-box.jpg",
+      "w": 540,
+      "h": 960,
+      "from": "xiaowu/carry-box.png"
+    },
+    {
+      "src": "assets/images/xiaowu-upper-body.jpg",
+      "w": 1080,
+      "h": 1080,
+      "from": "xiaowu/upper-body.png"
+    }
   ]
 }

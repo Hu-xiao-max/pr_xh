@@ -1,10 +1,18 @@
 /* =============================================================================
    papers.js — the single source of truth for the page.
 
-   • Order of the array = order of the slides (one slide per paper).
+   • Order of the array = order of the slides (one slide per paper or project).
+   • `section` ('research' by default, or 'project') groups the cover contents and the closing list under the
+     headings defined in SITE.sections; slides of a later section get a small section badge. Keep the research
+     entries first and the project entries after them so that the slide order matches the contents.
+   • A project entry has no `bibtex` / `links.pdf` (so no BibTeX / PDF buttons); `org` names the organisation
+     behind it, `infoLabel` renames the Abstract button (e.g. 'Details'), `abstractLabel` / `highlightsLabel`
+     the headings in that dialog, `links.project` + `links.extra` add link buttons, `thumb` sets the cover thumbnail.
    • `tags` are shown as keyword chips; `topics` are kept for optional filtering later.
    • `media.main`  = long overview / narrated video → native controls, no autoplay.
      `media.clips` = short demo loops → muted autoplay while the slide is on screen.
+     A YouTube video is `{ kind: 'youtube', id: '<video id>', label, duration, caption }` in either place:
+     the slide shows its thumbnail with a play button, the player loads on click (⤢ opens it large).
      `w`/`h` are the encoded pixel size (keeps the layout stable before loading),
      `duration` in seconds, `audio: true` adds an unmute button to a loop.
    • `points`  = the 2–3 bullets shown on the slide; `tldr`/`highlights` only appear in the Abstract dialog.
@@ -55,6 +63,25 @@ window.SITE = {
   // Author lists are kept in the data (BibTeX needs them) but are not shown anywhere:
   // not on the slides, not in the abstract dialog. Set to true to show them again.
   showAuthors: false,
+
+  // Sections of the deck, in the order they appear in the cover contents and the closing list. Every entry
+  // below carries `section: '<key>'` (entries without one belong to the first section). `label` is the
+  // heading, `badge` the short tag shown on the slides of the later sections. A section with `divider`
+  // gets its own chapter slide (title + intro + its contents) before its first entry; the research part
+  // has none because the cover opens it. The cover heading of such a section jumps to that slide.
+  sections: {
+    research: { label: 'Research' },
+    project: {
+      label: 'Projects', badge: 'Project',
+      divider: {
+        eyebrow: 'Part 2 \u00b7 Projects',
+        title: 'Projects.',
+        accent: 'From research to real robots.',
+        intro: 'The second part turns to robot systems developed with industry labs, where the skill-learning methods above meet real hardware, real users and everyday tasks.',   // TODO: adjust the wording
+        contentsLabel: 'In this part \u00b7 click a project to jump to it',
+      },
+    },
+  },
 
 };
 
@@ -525,6 +552,71 @@ window.PAPERS = [
           poster: 'assets/posters/teleop-tele3.jpg',
           w: 720, h: 1280, duration: 7,
           caption: '<b>Head-camera stream.</b> The robot’s view streamed to the operator over WebRTC (laptop view).',   // TODO: confirm
+        },
+      ],
+    },
+  },
+
+  /* ================================================================== */
+  /* Projects — shown after the papers (section: 'project')             */
+  /* ================================================================== */
+  {
+    id: 'xiaowu',
+    section: 'project',
+    shortTitle: 'XiaoWu (The Five) — Wheel-Legged Home Robot',
+    navTitle: 'XiaoWu',
+    title: 'XiaoWu (The Five): A Wheel-Legged Home Robot for Elderly Care',
+    org: 'Tencent Robotics X',                  // shown as a badge next to the slide number
+    year: 2024,                                 // data only — unveiled by Tencent Robotics X on 24 Sept 2024
+    status: { key: 'project', label: 'Research prototype' },   // data only
+    topics: ['Legged-Wheeled Locomotion', 'Physical Human-Robot Interaction', 'Real Robot'],
+    tags: ['Wheel-leg hybrid', 'Telescopic legs', 'Tactile skin', 'Dexterous hand', 'Whole-body control', 'Eldercare'],
+    // 2–3 bullet points shown on the slide
+    points: [
+      'Wheel-leg hybrid: four telescoping legs roll at up to 2 m/s, step over kerbs and climb stairs',
+      'A 180-point tactile skin on the arms and dexterous hands make physical contact with people safe',
+      'Care-home trials: fetches a parcel, helps an elder out of bed, pushes a wheelchair past obstacles',
+    ],
+    tldr: 'The Five (小五) is Tencent Robotics X’s fifth-generation robot for human living environments. Four straight legs that extend, retract and end in wheels let it switch between four-wheel, two-wheel and stepping modes, fold away for storage and reach from the floor to high shelves; a large-area tactile skin, dexterous hands and whole-body control let it hold, lift and guide people safely.',
+    // Shown as "Specifications" in the Details dialog. Figures from humanoid-robots.io — TODO: confirm against the lab's spec sheet
+    highlightsLabel: 'Specifications',
+    highlights: [
+      { value: '22 DoF', label: 'telescopic wheel-leg hybrid body, 35 kg' },
+      { value: '140–180 cm', label: 'variable standing height; folds for storage and transport' },
+      { value: '1.5–2.0 m/s', label: 'on flat ground; about 2 h of runtime' },
+    ],
+    infoLabel: 'Details',
+    abstractLabel: 'About the project (compiled from humanoid-robots.io and the lab’s announcement)',
+    abstract: 'XiaoWu (The Five) features a wheel-foot hybrid design that combines the speed of wheeled robots with the obstacle-clearing agility of legged systems. Standing at a variable height, it can autonomously fold to save space or rise to assist elderly users, and its large-area tactile skin lets it respond sensitively to human touch, ensuring safe physical support and companionship in home and nursing environments. Unveiled by Tencent Robotics X in September 2024 as the lab’s fifth-generation robot for human living environments, The Five combines four independently telescoping straight legs with wheels: on flat ground it switches between four-wheel and two-wheel modes (crossing the legs widens or narrows its support base), on stairs and kerbs it steps, and each leg extends or retracts so that the robot can reach high shelves or work close to the floor. The arms carry a curved tactile skin with 180 sensing points; together with multi-fingered dexterous hands, a high-torque-density waist actuator and vision, it supports safe physical human–robot interaction. A unified control framework — LiDAR/IMU localisation fused with wheel-leg odometry, multi-level online motion planning and whole-body control for combined mobility and manipulation, with active leg force control that behaves like an active suspension — lets it cross slopes, wavy ramps and cobblestones without any change to the home. In care-home trials it fetched parcels, helped elderly residents out of bed and pushed an occupied wheelchair while avoiding obstacles; the assisted-standing motion is an optimal-control model whose parameters are personalised from a small amount of data recorded with each person.',
+    links: {
+      pdf: '',
+      project: 'https://www.humanoid-robots.io/robot/xiaowu-by-tencent-robotics-x',
+      projectLabel: 'Robot profile',
+      extra: [
+        { label: 'Tencent Robotics X', href: 'https://roboticsx.tencent.com/' },
+      ],
+    },
+    bibtex: '',                                 // a project has no citation → no BibTeX button
+    thumb: 'assets/images/xiaowu-upper-body.jpg',   // cover contents thumbnail (no video poster yet)
+    // images on the slide (xiaowu/, web-sized by tools/optimize_images.py). Both come from the robot's
+    // humanoid-robots.io profile (credited to Tencent Robotics X) — TODO: replace with your own photos / renders
+    gallery: [
+      { src: 'assets/images/xiaowu-upper-body.jpg', w: 1080, h: 1080 },   // xiaowu/upper-body.png — upper body, heart on the chest display
+      { src: 'assets/images/xiaowu-carry-box.jpg', w: 540, h: 960 },      // xiaowu/carry-box.png — carrying a parcel in wheel-leg mode (540 px source: soft)
+    ],
+    // Layout: text band on top; below it the two photos and, in the wide right column, the YouTube clip.
+    layout: { mode: 'stack', board: { cols: '1fr 0.55fr 1.7fr', rows: 1, cells: [{ item: 'img:0' }, { item: 'img:1' }, { item: 'video:0' }] } },
+    // Video: the first YouTube clip embedded on the robot's humanoid-robots.io profile (channel "JobToRob",
+    // not the lab's own footage; the player loads from youtube-nocookie.com only when clicked — and only
+    // when the page is served over http(s): opened from disk, YouTube refuses to play, "error 153").
+    // TODO: swap in the lab's / your own demo video when you have one (drop it into xiaowu/, tools/optimize_videos.py --js xiaowu).
+    media: {
+      title: 'Video',
+      clips: [
+        {
+          kind: 'youtube', id: 'UsixIrwb7So',
+          label: 'Overview', w: 16, h: 9, duration: 58,
+          caption: '<b>Xiaowu, Tencent’s latest robotic marvel (0:58).</b> Walking, rolling and home-assistance scenes; the clip embedded on the humanoid-robots.io profile.',   // TODO: confirm what the clip shows
         },
       ],
     },

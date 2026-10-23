@@ -1,7 +1,11 @@
 # Research showcase — a web page that works like a slide deck
 
 A static, build-free presentation page: cover (opening text + clickable table of contents)
-→ one slide per paper → closing. Open it in a browser, press **F** for fullscreen and present
+→ one slide per paper → a **Projects** chapter slide → one slide per project → closing. The contents and
+the closing list are grouped into sections (**Research** / **Projects**, `SITE.sections` + `section` on each
+entry); a section with `divider` gets its chapter slide (title, intro and its own contents), project slides
+carry a small "Project" badge and the organisation's name, and have Details / link buttons instead of
+PDF / BibTeX. Open it in a browser, press **F** for fullscreen and present
 with the buttons at the bottom, a clicker or the keyboard (wheel and swipe navigation are off by
 default so that scrubbing a video never changes the slide; `SITE.navigation` in papers.js turns
 them on or the keyboard off). Each paper slide is mostly visual: a text band on top (title, 2–3 bullets, buttons for
@@ -18,7 +22,7 @@ The page is deliberately impersonal (no bio or contact details).
 index.html                 deck shell: viewport, bottom controls, dialogs
 assets/css/style.css       styling (white "clean academic" theme, fits 16:9 projectors and phones)
 assets/js/main.js          slide engine: navigation, dialogs, IntersectionObserver video loading
-assets/data/papers.js      ← ALL content lives here: cover/closing copy (SITE), paper order, metadata, captions
+assets/data/papers.js      ← ALL content lives here: cover/closing copy (SITE), sections, paper/project order, metadata, captions
 assets/videos_web/*.mp4    web-optimized videos (H.264, yuv420p, ≤1280 px, +faststart)
 assets/posters/*.jpg       poster frames shown before a video is fetched
 assets/images/*.jpg        the images from the paper folders, web-sized (tools/optimize_images.py)
@@ -35,9 +39,9 @@ tools/test_page.mjs        headless-Chrome smoke test (navigation, lazy loading,
 | Next / previous slide | `→` `↓` `Space` `PgDn` / `←` `↑` `PgUp` (clickers send these) |
 | Back to the cover / contents | `Home` / `H`, or the **Home** button at the bottom right |
 | Last slide | `End` |
-| Jump to paper *n* | `1` … `9` |
+| Jump to paper / project *n* | `1` … `9` |
 | Fullscreen | `F` |
-| Abstract / BibTeX of the current paper | `A` / `B` |
+| Abstract (or project details) / BibTeX of the current slide | `A` / `B` |
 | Enlarge the slide's images (← → flips between them) | `G`, or click an image; clips have a ⤢ button |
 | Play or pause the slide's main video | `V` |
 | Shortcut list | `?` |
@@ -52,6 +56,10 @@ overview videos have native controls and play on click or `V`. Every slide has a
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
+
+Serve the folder rather than double-clicking `index.html`: a page opened from disk (`file://`) sends no
+referrer, and YouTube then refuses to play its embedded clips ("error 153"). Opened that way, the deck
+shows a note with a link to the video instead; over http(s), and on GitHub Pages, the clips play inline.
 
 ## Publish on GitHub Pages
 
@@ -92,6 +100,9 @@ desktop and phone sizes, and reports the TODOs to confirm. The manual steps are 
    - `media.main` → long/narrated video, shown large with native controls.
    - `media.clips` → short demos, laid out automatically (portrait clips side by side,
      landscape clips stacked). `audio: true` adds an unmute button.
+   - A YouTube video goes in either place as `{ kind: 'youtube', id: '<video id>', label, duration, caption }`:
+     the slide shows its thumbnail with a play button, the player (youtube-nocookie.com) loads only when
+     clicked, ⤢ opens it large, and it is removed again when the slide leaves.
    - `points` → the 2–3 bullets on the slide. `tldr` and `highlights` are shown in the Abstract dialog.
    - `gallery` → `[{src, w, h}]` images on the slide, in order. Drop PNG/JPEG files into the paper
      folder and run `python3 tools/optimize_images.py`; it writes web-sized copies to `assets/images/`
@@ -105,6 +116,16 @@ desktop and phone sizes, and reports the TODOs to confirm. The manual steps are 
      columns, 5–6 in three; with a spare cell the widest image takes a double-width cell (or a portrait
      item a double-height one); portrait clips go side by side.
 4. Fill in `links.arxiv` / `links.code` when available — buttons appear only when a link is set.
+
+## Add a project (not a paper)
+
+Projects go after the papers in the array with `section: 'project'`; the cover contents and the closing
+list then show a **Projects** heading. A project entry has no `bibtex` and no `links.pdf` (so no BibTeX /
+PDF buttons), names the organisation in `org` (shown as a badge), renames the dialog button with
+`infoLabel: 'Details'` and its headings with `abstractLabel` / `highlightsLabel` (e.g. 'Specifications'),
+links out through `links.project` (+ `links.projectLabel`) and `links.extra: [{ label, href }]`, and sets
+`thumb` for the cover when it has no video poster. Everything else (points, gallery, layout, media) works
+as for a paper — see `xiaowu` in papers.js.
 
 ## Video loading policy (performance)
 

@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Research Highlights</title>
-  <meta name="description" content="Slide-deck research showcase: papers and demo videos on robot grasping, dexterous in-hand manipulation, real-world reinforcement learning, cloth unfolding, human-to-robot skill transfer and teleoperation.">
+  <meta name="description" content="Slide-deck research showcase: papers and demo videos on robot grasping, dexterous in-hand manipulation, real-world reinforcement learning, cloth unfolding, human-to-robot skill transfer and teleoperation, plus robot projects such as the wheel-legged home robot XiaoWu (The Five).">
   <meta name="theme-color" content="#ffffff">
+  <meta name="referrer" content="strict-origin-when-cross-origin"><!-- YouTube embeds need a referrer (their "error 153") -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Research Highlights — Learning Contact-Rich Robot Manipulation">
   <meta property="og:description" content="Papers and demo videos on grasping, dexterous manipulation, real-world RL and human-to-robot skill transfer.">
@@ -91,6 +92,7 @@
     <div class="lightbox-inner">
       <img id="fig-img" alt="">
       <video id="fig-video" playsinline hidden></video>
+      <iframe id="fig-embed" title="Video" hidden allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
       <div class="lightbox-bar">
         <button class="hud-btn" id="fig-prev" type="button" aria-label="Previous image (←)" data-fig-prev>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
@@ -118,9 +120,9 @@
           <li><span>Previous slide</span><span><kbd>←</kbd><kbd>↑</kbd><kbd>PgUp</kbd></span></li>
           <li><span>Back to the cover / contents</span><span><kbd>Home</kbd><kbd>H</kbd></span></li>
           <li><span>Last slide</span><span><kbd>End</kbd></span></li>
-          <li><span>Jump to paper n</span><span><kbd>1</kbd>…<kbd>9</kbd></span></li>
+          <li><span>Jump to paper / project n</span><span><kbd>1</kbd>…<kbd>9</kbd></span></li>
           <li><span>Fullscreen</span><span><kbd>F</kbd></span></li>
-          <li><span>Abstract of this paper</span><span><kbd>A</kbd></span></li>
+          <li><span>Abstract / details of this slide</span><span><kbd>A</kbd></span></li>
           <li><span>BibTeX of this paper</span><span><kbd>B</kbd></span></li>
           <li><span>Enlarge the images (then ← → to flip); clips have a ⤢ button</span><span><kbd>G</kbd></span></li>
           <li><span>Play / pause the first video</span><span><kbd>V</kbd></span></li>

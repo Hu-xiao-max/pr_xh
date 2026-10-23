@@ -47,6 +47,7 @@ SLUGS = {
     "tele": "teleop",
     "unfold": "cloth-unfold",
     "wrench_spin": "object-spin",
+    "xiaowu": "xiaowu",
 }
 
 # poster frame time (s) per output name; others use 1.0 s (0.2 s for clips < 10 s)

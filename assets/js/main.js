@@ -1,7 +1,12 @@
 /* =============================================================================
    main.js — slide-deck engine for the research showcase.
 
-   Slides: cover (with the table of contents) → one slide per paper → closing.
+   Slides: cover (with the table of contents) → one slide per paper / project → closing.
+   • Sections: SITE.sections (e.g. research, project) + `section` on each entry. With more than one
+     section the cover contents and the closing list are grouped under section headings, the slides of
+     the later sections carry a small section badge, and a section with `divider` gets a chapter slide
+     (title + its own contents) before its first entry. Slides are numbered in display order: section by
+     section, inside a section in PAPERS order — so keep the array in section order.
    • Navigation: the bottom buttons, dots, contents and Home button; keyboard / clicker keys
      (← → ↑ ↓ Space PgUp PgDn Home End, 1-9 jump to paper n) unless SITE.navigation.keys is false.
      Wheel and swipe navigation are opt-in (SITE.navigation) so video scrubbing never flips slides.
@@ -13,6 +18,10 @@
      muted loops when the slide is on screen (≥25 % visible) and pauses them as
      soon as the slide leaves. Long overview videos keep native controls and
      only play on request.
+   • YouTube embeds (media entries with kind: 'youtube' + the video id): the slide shows the video's
+     thumbnail with a play button; the player iframe is created on click, opened large by the ⤢ button
+     and removed again as soon as the slide leaves. Nothing from YouTube loads before the click except
+     the thumbnail, attached like the posters when the slide is next to the current one.
    Vanilla JS, no dependencies, no build step.
    ============================================================================= */
 (function () {
@@ -76,8 +85,37 @@
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).catch(legacy);
     return legacy();
   }
-  const thumbOf = (p) => p.thumb || (p.media && ((p.media.main && p.media.main.poster) ||
-    (p.media.clips && p.media.clips[0] && p.media.clips[0].poster))) || '';
+  // YouTube: thumbnail and player URLs from the video id (`poster` overrides the thumbnail)
+  const ytPoster = (v) => v.poster || ('https://i.ytimg.com/vi/' + encodeURIComponent(v.id || '') + '/maxresdefault.jpg');
+  const ytEmbedSrc = (v) => 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.id || '') + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
+  const ytWatchUrl = (v) => 'https://www.youtube.com/watch?v=' + encodeURIComponent(v.id || '');
+  // YouTube refuses to play inside a page that sends no referrer ("Error 153"), which is the case for a
+  // page opened from disk (file://). Serve the folder or open the published site; from disk the frame
+  // explains this and links to the video instead of showing YouTube's error.
+  const EMBEDS_BLOCKED = location.protocol === 'file:';
+  const posterOf = (v) => (v ? (v.kind === 'youtube' ? ytPoster(v) : v.poster) : '') || '';
+  const thumbOf = (p) => p.thumb || (p.media && (posterOf(p.media.main) || posterOf(p.media.clips && p.media.clips[0]))) || '';
+
+  /* ------------------------------------------------------------- sections */
+  // SITE.sections = { research: { label: 'Research' }, project: { label: 'Projects', badge: 'Project' } }.
+  // An entry belongs to `p.section`; entries without one (or with an unknown key) belong to the first section.
+  // Groups follow the key order of SITE.sections; inside a group the entries keep their PAPERS order.
+  const SECTIONS = (() => {
+    const def = (SITE.sections && Object.keys(SITE.sections).length) ? SITE.sections : { research: { label: 'Research' } };
+    const keys = Object.keys(def);
+    const of = (p) => (p && p.section && def[p.section] ? p.section : keys[0]);
+    const groups = keys.map((k) => ({
+      key: k, label: (def[k] && def[k].label) || k, badge: (def[k] && (def[k].badge || def[k].label)) || k,
+      divider: def[k] && def[k].divider ? (typeof def[k].divider === 'object' ? def[k].divider : {}) : null,   // chapter slide before the section
+      slideId: 'section-' + k, items: [],
+    }));
+    PAPERS.forEach((p, i) => groups.find((g) => g.key === of(p)).items.push({ p: p, i: i, n: 0 }));   // i = PAPERS index, n = display number
+    const used = groups.filter((g) => g.items.length);
+    const order = [];
+    used.forEach((g) => g.items.forEach((it) => { it.n = order.length + 1; order.push(it); }));
+    return { groups: used, order: order, of: of, multiple: used.length > 1,
+      badgeOf: (p) => (of(p) === keys[0] ? '' : (groups.find((g) => g.key === of(p)) || {}).badge || '') };
+  })();
 
   /* ------------------------------------------------------------ templates */
   function authorsPlain(p) {
@@ -97,8 +135,25 @@
 
   const stripTags = (s) => String(s || '').replace(/<[^>]*>/g, '');
 
+  // A YouTube video in a frame: thumbnail + play button; the iframe is added on click (setupVideos).
+  function embedFrameHTML(v) {
+    const w = v.w || 16, h = v.h || 9;
+    const overlays = [
+      v.label ? '<span class="vlabel">' + esc(v.label) + '</span>' : '',
+      v.duration ? '<span class="vbadge">' + fmtDuration(v.duration) + '</span>' : '',
+      '<button class="vexpand" type="button" aria-label="Enlarge video" data-expand>' + ICONS.expand + '</button>',
+      '<button class="vplay" type="button" aria-label="Play video" data-play>' + ICONS.play + '</button>',
+    ].join('');
+    return '<div class="vframe is-embed is-overview" style="--ar:' + (w / h).toFixed(4) + '" title="' + esc(stripTags(v.caption)) + '"' +
+      ' data-embed="' + esc(ytEmbedSrc(v)) + '" data-embed-title="' + esc(v.label || 'Video') + '" data-watch="' + esc(ytWatchUrl(v)) + '">' +
+      '<button class="embed-poster" type="button" aria-label="' + esc(v.alt || v.label || 'Play video') + '" data-play>' +
+        '<img data-poster="' + esc(ytPoster(v)) + '" alt="" decoding="async" width="' + w + '" height="' + h + '"></button>' +
+      overlays + '</div>';
+  }
+
   // One <video> in a frame (no caption on the slide; the caption becomes a tooltip).
   function videoFrameHTML(v) {
+    if (v.kind === 'youtube') return embedFrameHTML(v);
     const w = v.w || 16, h = v.h || 9;
     const isLoop = v.kind !== 'overview';
     const attrs = [
@@ -202,14 +257,25 @@
     return '<a class="btn ' + (cls || '') + '" href="' + esc(href) + '" target="_blank" rel="noopener">' + icon + '<span>' + esc(label) + '</span></a>';
   }
 
+  // one contents entry (cover and chapter slides): number, thumbnail, short title
+  const tocItem = (it) =>
+    '<button type="button" class="toc-item" data-goto="' + esc(it.p.id) + '" aria-label="Go to ' + esc(it.p.shortTitle || it.p.title) + '">' +
+      '<span class="num">' + pad2(it.n) + '</span>' +
+      (thumbOf(it.p) ? '<img src="' + esc(thumbOf(it.p)) + '" alt="" decoding="async">' : '<span class="toc-noimg"></span>') +
+      '<span class="toc-text"><span class="toc-title">' + esc(it.p.shortTitle || it.p.title) + '</span></span>' +
+    '</button>';
+
   function coverHTML() {
     const h = SITE.hero || {};
-    const items = PAPERS.map((p, i) =>
-      '<button type="button" class="toc-item" data-goto="' + esc(p.id) + '" aria-label="Go to ' + esc(p.shortTitle || p.title) + '">' +
-        '<span class="num">' + pad2(i + 1) + '</span>' +
-        (thumbOf(p) ? '<img src="' + esc(thumbOf(p)) + '" alt="" decoding="async">' : '<span class="toc-noimg"></span>') +
-        '<span class="toc-text"><span class="toc-title">' + esc(p.shortTitle || p.title) + '</span></span>' +
-      '</button>').join('');
+    // with several sections the list is split under small headings (Research / Projects); a heading whose
+    // section has a chapter slide jumps to that slide
+    const heading = (g) => (g.divider
+      ? '<button type="button" class="toc-section" data-goto="' + esc(g.slideId) + '">' + esc(g.label) + '</button>'
+      : '<p class="toc-section">' + esc(g.label) + '</p>');
+    const items = SECTIONS.multiple
+      ? SECTIONS.groups.map((g) => heading(g) + g.items.map(tocItem).join('')).join('')
+      : SECTIONS.order.map(tocItem).join('');
+    const rows = PAPERS.length + (SECTIONS.multiple ? SECTIONS.groups.length * 0.5 : 0);   // a heading costs about half a row
     return '<section class="slide slide-cover" id="cover" aria-label="Title and contents">' +
       '<div class="slide-inner"><div class="slide-content cover-grid">' +
         '<div class="cover-text">' +
@@ -220,13 +286,31 @@
         '</div>' +
         '<nav class="toc" aria-label="Contents">' +
           '<p class="section-label">' + esc(h.contentsLabel || 'Contents') + '</p>' +
-          // 8+ papers: tighter rows; 10+: two columns — keeps the cover inside a 1280x720 projector (style.css)
-          '<div class="toc-list' + (PAPERS.length >= 8 ? ' toc-dense' : '') + (PAPERS.length >= 10 ? ' toc-two' : '') + '">' + items + '</div>' +
+          // 8+ rows: tighter rows; 10+: two columns — keeps the cover inside a 1280x720 projector (style.css)
+          '<div class="toc-list' + (rows >= 8 ? ' toc-dense' : '') + (rows >= 10 ? ' toc-two' : '') + '">' + items + '</div>' +
         '</nav>' +
       '</div></div></section>';
   }
 
-  function paperSlideHTML(p, i) {
+  // Chapter slide of a section (SITE.sections.<key>.divider): eyebrow, title, intro and the section's contents.
+  function sectionSlideHTML(g) {
+    const d = g.divider || {};
+    return '<section class="slide slide-section" id="' + esc(g.slideId) + '" aria-label="' + esc(g.label) + '">' +
+      '<div class="slide-inner"><div class="slide-content cover-grid">' +
+        '<div class="cover-text">' +
+          '<p class="eyebrow">' + esc(d.eyebrow || g.label) + '</p>' +
+          '<h2 class="section-title">' + esc(d.title || g.label) + (d.accent ? ' <span>' + esc(d.accent) + '</span>' : '') + '</h2>' +
+          (d.intro ? '<p class="lede">' + esc(d.intro) + '</p>' : '') +
+        '</div>' +
+        '<nav class="toc" aria-label="' + esc(g.label) + '">' +
+          '<p class="section-label">' + esc(d.contentsLabel || 'In this part') + '</p>' +
+          '<div class="toc-list">' + g.items.map(tocItem).join('') + '</div>' +
+        '</nav>' +
+      '</div></div></section>';
+  }
+
+  function paperSlideHTML(it) {
+    const p = it.p, i = it.i;
     const links = p.links || {};
     const points = (p.points || []).slice(0, 3).map((t) => '<li><span>' + esc(t) + '</span></li>').join('');
     const textItems = placement(p).text;
@@ -234,15 +318,24 @@
     const blocks = textItems.filter((it) => !(it.kind === 'img' && it.ar < 2)).map((it) =>
       it.kind === 'img' ? inlineImgHTML(p, it) : '<div class="text-video" style="--ar:' + it.ar.toFixed(4) + '">' + videoFrameHTML(it.v) + '</div>').join('');
     const stack = (p.layout || {}).mode === 'stack';
+    // Buttons: PDF / BibTeX only when the entry has them (a project has neither); the dialog button reads
+    // `infoLabel` ('Abstract' by default, e.g. 'Details' for a project); `links.project` + `links.extra` add links.
+    const hasBibtex = !!String(p.bibtex || '').trim();
     const actions = '<div class="actions">' +
       (links.pdf ? btnHTML(links.pdf, links.pdfLabel || 'Paper PDF', ICONS.pdf, 'btn-dark') : '') +
-      '<button class="btn" type="button" data-abstract="' + esc(p.id) + '">' + ICONS.abstract + '<span>Abstract</span></button>' +
-      '<button class="btn" type="button" data-bibtex="' + esc(p.id) + '">' + ICONS.bibtex + '<span>BibTeX</span></button>' +
+      '<button class="btn" type="button" data-abstract="' + esc(p.id) + '">' + ICONS.abstract + '<span>' + esc(p.infoLabel || 'Abstract') + '</span></button>' +
+      (hasBibtex ? '<button class="btn" type="button" data-bibtex="' + esc(p.id) + '">' + ICONS.bibtex + '<span>BibTeX</span></button>' : '') +
       (links.arxiv ? btnHTML(links.arxiv, 'arXiv', ICONS.arxiv) : '') +
       (links.code ? btnHTML(links.code, 'Code', ICONS.code) : '') +
-      (links.project ? btnHTML(links.project, 'Project page', ICONS.link) : '') +
+      (links.project ? btnHTML(links.project, links.projectLabel || 'Project page', ICONS.link, links.pdf ? '' : 'btn-dark') : '') +
+      (links.extra || []).map((l) => (l && l.href ? btnHTML(l.href, l.label || 'Link', ICONS.link) : '')).join('') +
       '</div>';
-    const head = '<div class="badges"><span class="num">' + pad2(i + 1) + '</span></div>' +
+    // Badges: slide number; a section badge on the slides of later sections ("Project"); `org` names the
+    // organisation behind a project (never an author or affiliation line — see SITE.showAuthors).
+    const sectionBadge = SECTIONS.badgeOf(p);
+    const head = '<div class="badges"><span class="num">' + pad2(it.n) + '</span>' +
+      (sectionBadge ? '<span class="badge section">' + esc(sectionBadge) + '</span>' : '') +
+      (p.org ? '<span class="badge org">' + esc(p.org) + '</span>' : '') + '</div>' +
       '<h2 class="paper-title">' + esc(p.title) + '</h2>' +
       (SITE.showAuthors === false ? '' : '<p class="authors">' + authorsPlain(p) + '</p>');
     const text = stack
@@ -260,14 +353,17 @@
     const c = SITE.closing || {};
     const points = (c.points || []).map((pt, i) =>
       '<li><span class="num">' + pad2(i + 1) + '</span><div><strong>' + esc(pt.lead) + '</strong> ' + esc(pt.text) + '</div></li>').join('');
-    const list = PAPERS.map((p, i) =>
-      '<button type="button" class="end-item" data-goto="' + esc(p.id) + '"><span class="num">' + pad2(i + 1) + '</span><span>' + esc(p.shortTitle || p.title) + '</span></button>').join('');
+    const endItem = (it) =>
+      '<button type="button" class="end-item" data-goto="' + esc(it.p.id) + '"><span class="num">' + pad2(it.n) + '</span><span>' + esc(it.p.shortTitle || it.p.title) + '</span></button>';
+    const list = SECTIONS.multiple
+      ? SECTIONS.groups.map((g) => '<p class="section-label end-section">' + esc(g.label) + '</p>' + g.items.map(endItem).join('')).join('')
+      : '<p class="section-label">' + esc(c.listLabel || 'Papers in this deck') + '</p>' + SECTIONS.order.map(endItem).join('');
     return '<section class="slide slide-end" id="end" aria-label="Summary">' +
       '<div class="slide-inner"><div class="slide-content end-grid">' +
         '<div class="end-text"><p class="eyebrow">' + esc(c.eyebrow || 'In short') + '</p><h2>' + esc(c.title || 'Takeaways') + '</h2>' +
           (points ? '<ol class="takeaways">' + points + '</ol>' : '') +
           '<p class="thanks">' + esc(c.thanks || 'Thank you') + '</p></div>' +
-        '<div class="end-list"><p class="section-label">Papers in this deck</p>' + list + '</div>' +
+        '<div class="end-list">' + list + '</div>' +
       '</div></div></section>';
   }
 
@@ -276,7 +372,9 @@
   const track = () => $('#track');
 
   function buildDeck() {
-    track().innerHTML = coverHTML() + PAPERS.map(paperSlideHTML).join('') + endHTML();
+    track().innerHTML = coverHTML() +
+      SECTIONS.groups.map((g) => (g.divider && SECTIONS.multiple ? sectionSlideHTML(g) : '') + g.items.map(paperSlideHTML).join('')).join('') +
+      endHTML();
     deck.slides = $$('.slide', track());
     deck.ids = deck.slides.map((s) => s.id);
     $('#dots').innerHTML = deck.slides.map((s, i) =>
@@ -305,7 +403,7 @@
     const inner = $('.slide-inner', deck.slides[i]);
     if (inner) inner.scrollTop = 0;
     // Pre-attach src + poster on the neighbouring slides (no media bytes are fetched: preload="none").
-    [i - 1, i + 1].forEach((k) => { if (deck.slides[k]) $$('video[data-src]', deck.slides[k]).forEach(video.load); });
+    [i - 1, i + 1].forEach((k) => { if (deck.slides[k]) { $$('video[data-src]', deck.slides[k]).forEach(video.load); $$('.vframe.is-embed', deck.slides[k]).forEach(video.loadEmbedPoster); } });
     if (!opts.silent) history.replaceState(null, '', '#/' + deck.ids[i]);
     document.title = (i === 0 ? '' : (deck.slides[i].getAttribute('aria-label') + ' · ')) + (SITE.pageTitle || 'Research Highlights');
   }
@@ -326,7 +424,7 @@
     $('#info-sub').textContent = '';
     $('#info-body').innerHTML =
       (p.tldr ? '<h4>TL;DR</h4><p>' + esc(p.tldr) + '</p>' : '') +
-      ((p.highlights || []).length ? '<h4>Key results</h4><ul class="info-list">' + p.highlights.map((h) => '<li><strong>' + esc(h.value) + '</strong> ' + esc(h.label) + '</li>').join('') + '</ul>' : '') +
+      ((p.highlights || []).length ? '<h4>' + esc(p.highlightsLabel || 'Key results') + '</h4><ul class="info-list">' + p.highlights.map((h) => '<li><strong>' + esc(h.value) + '</strong> ' + esc(h.label) + '</li>').join('') + '</ul>' : '') +
       (SITE.showAuthors === false ? '' : '<h4>Authors</h4>' + authorsFull(p)) +
       '<h4>' + esc(p.abstractLabel || 'Abstract') + '</h4><p>' + esc(p.abstract || '') + '</p>' +
       ((p.tags || []).length ? '<h4>Keywords</h4><p>' + p.tags.map(esc).join(' · ') + '</p>' : '');
@@ -338,13 +436,19 @@
     if (!lightbox.items.length) return;
     lightbox.index = (i + lightbox.items.length) % lightbox.items.length;
     const it = lightbox.items[lightbox.index];
-    const img = $('#fig-img'), vid = $('#fig-video');
+    const img = $('#fig-img'), vid = $('#fig-video'), emb = $('#fig-embed');
+    const hideImg = () => { img.hidden = true; img.removeAttribute('src'); };
+    const hideVid = () => { vid.hidden = true; vid.pause(); vid.removeAttribute('src'); vid.load(); };
+    const hideEmb = () => { if (emb) { emb.hidden = true; emb.src = 'about:blank'; } };   // about:blank stops the player
     if (it.kind === 'video') {
-      img.hidden = true; img.removeAttribute('src');
+      hideImg(); hideEmb();
       vid.hidden = false; vid.loop = !!it.loop; vid.muted = !!it.loop; vid.controls = true; vid.src = it.src;
       const pr = vid.play(); if (pr && pr.catch) pr.catch(() => {});
+    } else if (it.kind === 'embed') {
+      hideImg(); hideVid();
+      if (emb) { emb.title = it.title || 'Video'; emb.src = it.src; emb.hidden = false; }
     } else {
-      vid.hidden = true; vid.pause(); vid.removeAttribute('src'); vid.load();
+      hideVid(); hideEmb();
       img.hidden = false; img.src = it.src; img.alt = 'Image ' + (lightbox.index + 1);
     }
     $('#fig-counter').textContent = (lightbox.index + 1) + ' / ' + lightbox.items.length;
@@ -361,26 +465,36 @@
     lightbox.items = [{ kind: 'video', src: v.dataset.src || v.src, loop: v.hasAttribute('loop') }];
     showItem(0); openDialog($('#fig-dialog'));
   }
+  function openEmbedLightbox(frame) {
+    if (!frame || !frame.dataset.embed) return;
+    lightbox.items = [{ kind: 'embed', src: frame.dataset.embed, title: frame.dataset.embedTitle }];
+    showItem(0); openDialog($('#fig-dialog'));
+  }
   function setupLightbox() {
     const d = $('#fig-dialog');
     if (!d) return;
-    d.addEventListener('close', () => { const vid = $('#fig-video'); vid.pause(); vid.removeAttribute('src'); vid.load(); vid.hidden = true; });
+    d.addEventListener('close', () => {
+      const vid = $('#fig-video'); vid.pause(); vid.removeAttribute('src'); vid.load(); vid.hidden = true;
+      const emb = $('#fig-embed'); if (emb) { emb.src = 'about:blank'; emb.hidden = true; }
+    });
   }
 
   let currentBibtex = '';
   function openBibtex(p) {
     if (!p) return;
     currentBibtex = String(p.bibtex || '').trim();
+    if (!currentBibtex) return;                               // projects have no citation
     $('#bibtex-text').textContent = currentBibtex;
     $('#bibtex-title').textContent = p.shortTitle || p.title;
     openDialog($('#bibtex-dialog'));
   }
 
   /* --------------------------------------------------------------- videos */
-  const video = { load: () => {}, pauseAll: () => {} };
+  const video = { load: () => {}, pauseAll: () => {}, loadEmbedPoster: () => {}, playEmbed: () => {}, unloadEmbed: () => {} };
 
   function setupVideos() {
     const videos = $$('video[data-src]');
+    const embeds = $$('.vframe.is-embed');
     const frameOf = (v) => v.closest('.vframe');
     function load(v) {
       if (!v || v.dataset.loaded) return;
@@ -389,6 +503,31 @@
       v.src = v.dataset.src;                     // preload="none" ⇒ nothing downloads until play()
     }
     function pause(v) { if (!v.paused && !v.ended) v.pause(); }
+    // YouTube embeds: thumbnail now, player iframe on click, removed again when the slide leaves
+    function loadEmbedPoster(f) {
+      const img = f && $('img[data-poster]', f);
+      if (!img || img.getAttribute('src')) return;
+      img.addEventListener('error', () => { if (/maxresdefault/.test(img.src)) img.src = img.src.replace('maxresdefault', 'hqdefault'); }, { once: true });
+      img.src = img.dataset.poster;
+    }
+    function playEmbed(f) {
+      if (!f || !f.dataset.embed || $('iframe', f) || $('.embed-note', f)) return;
+      if (EMBEDS_BLOCKED) {
+        const note = document.createElement('div');
+        note.className = 'embed-note';
+        note.innerHTML = '<p>YouTube does not play inside a page opened from disk (its “error 153”: no referrer).</p>' +
+          '<p>Serve the folder — <code>python3 -m http.server 8000</code> — or open the published site.</p>' +
+          '<a class="btn btn-dark" href="' + esc(f.dataset.watch || '#') + '" target="_blank" rel="noopener">' + ICONS.link + '<span>Watch on YouTube</span></a>';
+        f.appendChild(note); f.classList.add('has-played');
+        return;
+      }
+      const ifr = document.createElement('iframe');
+      ifr.src = f.dataset.embed; ifr.title = f.dataset.embedTitle || 'Video';
+      ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+      ifr.setAttribute('allowfullscreen', ''); ifr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      f.appendChild(ifr); f.classList.add('is-playing', 'has-played');
+    }
+    function unloadEmbed(f) { if (!f) return; $$('iframe, .embed-note', f).forEach((e) => e.remove()); f.classList.remove('is-playing', 'has-played'); }
     function tryPlay(v) {
       if (!v.hasAttribute('data-autoplay')) return;
       load(v);
@@ -405,7 +544,8 @@
       b.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
     }
     video.load = load;
-    video.pauseAll = () => videos.forEach(pause);
+    video.pauseAll = () => { videos.forEach(pause); embeds.forEach(unloadEmbed); };
+    video.loadEmbedPoster = loadEmbedPoster; video.playEmbed = playEmbed; video.unloadEmbed = unloadEmbed;
 
     videos.forEach((v) => {
       const frame = frameOf(v);
@@ -415,17 +555,18 @@
       v.addEventListener('error', () => { frame.classList.add('has-error'); frame.classList.remove('needs-tap'); });
     });
 
-    if (!('IntersectionObserver' in window)) { videos.forEach((v) => { load(v); v.controls = true; }); return; }
+    if (!('IntersectionObserver' in window)) { videos.forEach((v) => { load(v); v.controls = true; }); embeds.forEach(loadEmbedPoster); return; }
 
     // 1) Slides next to the current one: attach poster + src so they start instantly.
     const near = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { load(e.target); near.unobserve(e.target); } });
+      entries.forEach((e) => { if (e.isIntersecting) { if (e.target.classList.contains('is-embed')) loadEmbedPoster(e.target); else load(e.target); near.unobserve(e.target); } });
     }, { rootMargin: '0px 100% 0px 100%' });
 
-    // 2) On screen: start autoplay loops; off screen: pause whatever is playing.
+    // 2) On screen: start autoplay loops; off screen: pause whatever is playing (embeds: remove the player).
     const visible = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         const v = e.target;
+        if (v.classList.contains('is-embed')) { if (!e.isIntersecting) unloadEmbed(v); return; }
         v.dataset.inView = e.isIntersecting ? '1' : '';
         if (!e.isIntersecting) { pause(v); return; }
         if (e.intersectionRatio >= 0.25) tryPlay(v);
@@ -433,6 +574,7 @@
     }, { threshold: [0, 0.25, 0.6] });
 
     videos.forEach((v) => { near.observe(v); visible.observe(v); });
+    embeds.forEach((f) => { near.observe(f); visible.observe(f); });
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) videos.forEach(pause);
@@ -442,7 +584,9 @@
     document.addEventListener('click', (ev) => {
       const playBtn = ev.target.closest('[data-play]');
       if (playBtn) {
-        const v = $('video', playBtn.parentElement);
+        const frame = playBtn.closest('.vframe');
+        if (frame && frame.classList.contains('is-embed')) { playEmbed(frame); return; }
+        const v = $('video', frame || playBtn.parentElement);
         load(v);
         if (v.hasAttribute('loop')) v.muted = true; else v.controls = true;
         const pr = v.play(); if (pr && pr.catch) pr.catch(() => {});
@@ -463,7 +607,11 @@
   function toggleMainVideo() {
     const s = deck.slides[deck.index];
     const v = s && $('video', s);
-    if (!v) return;
+    if (!v) {                                                  // no <video>: start / stop the first YouTube embed
+      const f = s && $('.vframe.is-embed', s);
+      if (f) { if ($('iframe', f)) video.unloadEmbed(f); else video.playEmbed(f); }
+      return;
+    }
     video.load(v);
     if (v.paused) { if (!v.hasAttribute('loop')) v.controls = true; const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); }
     else v.pause();
@@ -499,7 +647,15 @@
       const gal = t.closest('[data-gallery]');
       if (gal) { openGallery(PAPERS.find((p) => p.id === gal.dataset.gallery), +gal.dataset.galleryIndex || 0); return; }
       const ex = t.closest('[data-expand]');
-      if (ex) { openVideoLightbox($('video', ex.parentElement)); return; }
+      if (ex) {
+        const frame = ex.closest('.vframe');
+        if (frame && frame.classList.contains('is-embed')) {
+          if (EMBEDS_BLOCKED) { window.open(frame.dataset.watch || '#', '_blank', 'noopener'); return; }   // see EMBEDS_BLOCKED
+          video.unloadEmbed(frame); openEmbedLightbox(frame);
+        }
+        else openVideoLightbox($('video', frame || ex.parentElement));
+        return;
+      }
       if (t.closest('[data-fig-prev]')) { showItem(lightbox.index - 1); return; }
       if (t.closest('[data-fig-next]')) { showItem(lightbox.index + 1); return; }
       const abs = t.closest('[data-abstract]');
@@ -547,7 +703,7 @@
         case 'v': case 'V': toggleMainVideo(); return;
         case '?': openDialog($('#help-dialog')); return;
         default:
-          if (/^[1-9]$/.test(k)) { const i = deck.ids.indexOf((PAPERS[+k - 1] || {}).id); if (i >= 0) goTo(i); }
+          if (/^[1-9]$/.test(k)) { const it = SECTIONS.order[+k - 1]; const i = it ? deck.ids.indexOf(it.p.id) : -1; if (i >= 0) goTo(i); }
       }
     });
 

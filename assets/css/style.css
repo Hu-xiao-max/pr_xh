@@ -81,6 +81,8 @@ kbd {
 .badge.status-accepted { background: var(--green-soft); color: var(--green); border: 1px solid var(--green-line); }
 .badge.status-review { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber-line); }
 .badge.status-workshop, .badge.status-talk, .badge.status-preprint { background: var(--gray-soft); color: var(--ink-2); border: 1px solid var(--line); }
+.badge.section { background: var(--accent-soft); color: var(--accent-ink); }                /* "Project" on the slides of a later section */
+.badge.org { background: var(--gray-soft); color: var(--ink-2); border: 1px solid var(--line); } /* organisation behind a project */
 .num { font-family: var(--font-serif); font-size: clamp(.95rem, 1.2vw, 1.25rem); color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; margin-right: .2rem; }
 .tag { font-size: clamp(.64rem, .74vw, .76rem); padding: .2em .6em; border-radius: 6px; background: var(--gray-soft); color: var(--ink-2); font-weight: 500; }
 .tags { display: flex; flex-wrap: wrap; gap: .3rem; }
@@ -97,20 +99,25 @@ kbd {
 .btn-dark { background: var(--ink); border-color: var(--ink); color: #fff; }
 .btn-dark:hover { background: #000; border-color: #000; }
 
-/* ---------- Cover: opening text + table of contents ---------- */
-.slide-cover .slide-inner::before {
+/* ---------- Cover: opening text + table of contents (chapter slides reuse this) ---------- */
+.slide-cover .slide-inner::before, .slide-section .slide-inner::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
     radial-gradient(42% 60% at 14% 24%, rgba(36, 87, 214, .10), transparent 70%),
     radial-gradient(36% 50% at 86% 80%, rgba(124, 58, 237, .08), transparent 70%);
 }
-.slide-cover .slide-inner { position: relative; isolation: isolate; }
+.slide-cover .slide-inner, .slide-section .slide-inner { position: relative; isolation: isolate; }
+.slide-section .slide-inner::before {
+  background:
+    radial-gradient(42% 60% at 14% 24%, rgba(124, 58, 237, .09), transparent 70%),
+    radial-gradient(36% 50% at 86% 80%, rgba(36, 87, 214, .08), transparent 70%);
+}
 .cover-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(24px, 4vw, 72px); align-items: center; }
-.cover-text h1 {
+.cover-text h1, .cover-text .section-title {
   margin: 0 0 .4em; font-family: var(--font-serif); font-weight: 600;
   font-size: clamp(1.9rem, 4.1vw, 4.3rem); line-height: 1.05; letter-spacing: -.02em; text-wrap: balance;
 }
-.cover-text h1 span { color: var(--muted); font-weight: 500; }
+.cover-text h1 span, .cover-text .section-title span { color: var(--muted); font-weight: 500; }
 .lede { margin: 0; font-size: clamp(.95rem, 1.22vw, 1.25rem); color: var(--ink-2); max-width: 58ch; }
 .hint { margin: clamp(1rem, 1.8vw, 1.8rem) 0 0; font-size: clamp(.76rem, .88vw, .9rem); color: var(--muted); display: flex; flex-wrap: wrap; gap: .35em .55em; align-items: center; }
 .toc { display: grid; gap: .2rem; align-content: center; min-width: 0; }
@@ -135,7 +142,15 @@ kbd {
 }
 .toc-meta { font-size: clamp(.64rem, .74vw, .76rem); color: var(--muted); font-weight: 500; }
 .toc-item .badge { justify-self: end; }
-/* 8 or more papers: tighter rows (main.js adds .toc-dense) so the cover still fits a 1280x720 projector;
+/* section headings inside the contents (only when the deck has more than one section, e.g. Research / Projects) */
+.toc-section {
+  grid-column: 1 / -1; margin: clamp(.2rem, .4vw, .45rem) 0 0; padding-left: .15rem;
+  font-size: clamp(.64rem, .74vw, .76rem); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+}
+.toc-section:first-child { margin-top: 0; }
+button.toc-section { border: 0; background: none; text-align: left; cursor: pointer; font-family: inherit; line-height: 1.5; }
+button.toc-section:hover { text-decoration: underline; text-underline-offset: .2em; }
+/* 8 or more rows: tighter rows (main.js adds .toc-dense) so the cover still fits a 1280x720 projector;
    10 or more: two columns (.toc-two) */
 .toc-list.toc-dense { gap: clamp(4px, .5vw, 6px); }
 .toc-list.toc-dense .toc-item { padding-top: clamp(.25rem, .38vw, .35rem); padding-bottom: clamp(.25rem, .38vw, .35rem); }
@@ -260,6 +275,20 @@ kbd {
 .vplay svg { width: 38%; height: 38%; margin-left: 4%; }
 .vframe.needs-tap .vplay, .vframe.is-overview:not(.has-played) .vplay { opacity: 1; pointer-events: auto; transform: scale(1); }
 .vframe.is-overview:not(.has-played) .vplay:hover { transform: scale(1.06); }
+/* YouTube embeds: thumbnail + play button until clicked, then the player iframe fills the frame */
+.vframe.is-embed { aspect-ratio: var(--ar, 1.78); }
+.cell-video .vframe.is-embed { aspect-ratio: auto; }
+.vframe.is-embed .embed-poster { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--frame); cursor: pointer; }
+.vframe.is-embed .embed-poster img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.vframe.is-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+.vframe.is-embed.has-played .embed-poster, .vframe.is-embed.has-played .vexpand, .vframe.is-embed.has-played .vbadge, .vframe.is-embed.has-played .vlabel { display: none; }   /* the player shows its own title bar */
+.embed-note {
+  position: absolute; inset: 0; z-index: 4; display: grid; align-content: center; justify-items: center; gap: .45rem;
+  padding: 1rem 1.5rem; text-align: center; background: var(--frame); color: #fff; font-size: clamp(.78rem, .95vw, .95rem); line-height: 1.45;
+}
+.embed-note p { margin: 0; color: rgba(255, 255, 255, .82); max-width: 44ch; }
+.embed-note code { font-family: var(--font-mono); font-size: .92em; background: rgba(255, 255, 255, .14); padding: .1em .4em; border-radius: 5px; }
+.embed-note .btn { margin-top: .5rem; }
 
 /* ---------- Closing slide ---------- */
 .end-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 72px); align-items: center; }
@@ -269,6 +298,8 @@ kbd {
 .takeaways strong { color: var(--ink); font-weight: 600; }
 .thanks { margin: 0; font-family: var(--font-serif); font-size: clamp(1.3rem, 2.2vw, 2.3rem); color: var(--ink); }
 .end-list { display: grid; gap: .5rem; align-content: center; }
+.end-section { margin: .5rem 0 0; }
+.end-section:first-child { margin-top: 0; }
 .end-item {
   display: flex; align-items: center; gap: .7rem; text-align: left; width: 100%;
   border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: .55rem .7rem; cursor: pointer;
@@ -356,6 +387,7 @@ dialog.lightbox { background: transparent; box-shadow: none; max-width: 96vw; wi
 .lightbox-inner { display: grid; gap: .7rem; justify-items: center; }
 .lightbox-inner img, .lightbox-inner video { max-width: 96vw; max-height: 82vh; width: auto; height: auto; border-radius: 12px; background: #fff; box-shadow: var(--shadow-lg); border: 6px solid #fff; }
 .lightbox-inner video { background: #000; border-color: #000; min-width: min(60vw, 900px); }
+.lightbox-inner iframe { width: min(96vw, calc(82vh * 16 / 9), 1280px); aspect-ratio: 16 / 9; border: 6px solid #000; border-radius: 12px; background: #000; box-shadow: var(--shadow-lg); display: block; }
 .lightbox-inner [hidden] { display: none; }
 .info-list { margin: 0; padding-left: 1.1em; display: grid; gap: .3em; }
 .lightbox-bar { display: flex; align-items: center; gap: .5rem; background: #fff; padding: .35rem .5rem; border-radius: 999px; box-shadow: var(--shadow-md); }

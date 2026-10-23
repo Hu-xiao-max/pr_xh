@@ -40,18 +40,32 @@ await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, dev
 await send('Page.navigate', { url: BASE });
 await sleep(1800);
 const nPapers = await ev('window.PAPERS.length');
+const nDividers = await ev('document.querySelectorAll(".slide-section").length');   // chapter slides of sections with `divider`
+const nSlides = nPapers + 2 + nDividers;
 
 console.log('Deck');
-check('slides = papers + cover + end', (await ev('document.querySelectorAll(".slide").length')) === nPapers + 2);
+check('slides = papers + cover + end + chapter slides', (await ev('document.querySelectorAll(".slide").length')) === nSlides);
 check('cover lists every paper in its contents', (await ev('document.querySelectorAll("#cover .toc-item").length')) === nPapers);
 check('cover shows no statistics block', (await ev('document.querySelectorAll("#cover .stats, #cover .stat").length')) === 0);
 check('starts on the cover', (await active()) === 'cover');
-check('counter shows 1 / N', (await ev('document.getElementById("current").textContent + "/" + document.getElementById("total").textContent')) === `1/${nPapers + 2}`);
-check('inactive slides are inert', (await ev('document.querySelectorAll(".slide[inert]").length')) === nPapers + 1);
+check('counter shows 1 / N', (await ev('document.getElementById("current").textContent + "/" + document.getElementById("total").textContent')) === `1/${nSlides}`);
+check('inactive slides are inert', (await ev('document.querySelectorAll(".slide[inert]").length')) === nSlides - 1);
 check('on the cover only the neighbouring first paper has its video src pre-attached, nothing plays',
   (await ev('[...document.querySelectorAll("video")].filter(v=>v.getAttribute("src")).every(v=>v.closest(".slide").id===window.PAPERS[0].id)')) &&
   (await ev('[...document.querySelectorAll("video")].every(v=>v.paused)')));
 check('no author line anywhere on the slides', (await ev('document.querySelectorAll(".authors, .authors-anon").length')) === 0);
+// sections (Research / Projects): headings on the cover and the closing slide, a badge on the later sections' slides
+const nSections = await ev('new Set(window.PAPERS.map(p => (window.SITE.sections || {})[p.section] ? p.section : Object.keys(window.SITE.sections || {research: 1})[0])).size');
+check(`cover contents are grouped under ${nSections > 1 ? nSections : 'no'} section headings`, (await ev('document.querySelectorAll("#cover .toc-section").length')) === (nSections > 1 ? nSections : 0));
+check('closing list is grouped the same way', (await ev('document.querySelectorAll("#end .end-section").length')) === (nSections > 1 ? nSections : 0));
+check('section headings and contents entries follow the PAPERS order (first section first)', await ev('(() => { const els = [...document.querySelectorAll("#cover .toc-section, #cover .toc-item")]; let seen = -1; for (const e of els) { if (e.classList.contains("toc-item")) { const i = window.PAPERS.findIndex(p => p.id === e.dataset.goto); if (i < seen) return false; seen = i; } } return true; })()'));
+const projectIds = await ev('window.PAPERS.filter(p => p.section && p.section !== "research").map(p => p.id)');
+check(`project slides (${projectIds.join(', ') || 'none'}) show a section badge, no PDF / BibTeX buttons and a project link`, await ev('window.PAPERS.filter(p => p.section && p.section !== "research").every(p => { const s = document.getElementById(p.id); return s.querySelector(".badge.section") && !s.querySelector("[data-bibtex]") && !s.querySelector(".btn[href$=\'.pdf\']") && s.querySelector(".actions a.btn[href^=\'http\']"); })'));
+check('research slides keep their Abstract and BibTeX buttons', await ev('window.PAPERS.filter(p => !p.section || p.section === "research").every(p => document.querySelector("#" + p.id + " [data-abstract]") && document.querySelector("#" + p.id + " [data-bibtex]"))'));
+check(`every section with a divider gets one chapter slide (${nDividers})`, nDividers === (await ev('Object.keys(window.SITE.sections || {}).filter(k => window.SITE.sections[k].divider && window.PAPERS.some(p => (p.section || Object.keys(window.SITE.sections)[0]) === k)).length')));
+check('a chapter slide sits right before the first slide of its section', await ev('[...document.querySelectorAll(".slide-section")].every(s => { const key = s.id.replace(/^section-/, ""); const next = s.nextElementSibling; return !!next && next.classList.contains("slide-paper") && (window.PAPERS.find(p => p.id === next.id) || {}).section === key; })'));
+check('a chapter slide lists exactly its section\'s entries', await ev('[...document.querySelectorAll(".slide-section")].every(s => { const key = s.id.replace(/^section-/, ""); const ids = [...s.querySelectorAll(".toc-item")].map(b => b.dataset.goto); const want = window.PAPERS.filter(p => p.section === key).map(p => p.id); return ids.join() === want.join(); })'));
+check('slide numbers run in display order', await ev('[...document.querySelectorAll(".slide-paper .badges .num")].map(e => +e.textContent).every((n, i) => n === i + 1)'));
 check('Home button is disabled on the cover', await ev('document.getElementById("home").disabled'));
 
 console.log('Keyboard navigation');
@@ -59,7 +73,7 @@ const firstId = await ev('window.PAPERS[0].id');
 await key('ArrowRight'); await sleep(1200);
 check('→ goes straight to the first paper', (await active()) === firstId);
 check('hash follows the slide', (await ev('location.hash')) === '#/' + firstId);
-check('progress bar shows slide 2 of N', Math.abs(parseFloat(await ev('document.getElementById("progress").style.width')) - 200 / (nPapers + 2)) < 0.01);
+check('progress bar shows slide 2 of N', Math.abs(parseFloat(await ev('document.getElementById("progress").style.width')) - 200 / nSlides) < 0.01);
 check('current slide video has src, next slide too, two slides away not yet',
   (await ev(`!!document.querySelector("#${firstId} video").getAttribute("src")`)) &&
   (await ev('!!document.querySelector("#" + window.PAPERS[1].id + " video").getAttribute("src")')) &&
@@ -105,6 +119,13 @@ await ev('document.querySelector("#cover .toc-item[data-goto=teleop]").click()')
 check('a contents entry on the cover jumps to its paper', (await active()) === 'teleop');
 const tele = await ev('[...document.querySelectorAll("#teleop video")].map(v=>{const r=v.getBoundingClientRect();return {paused:v.paused,w:Math.round(r.width),h:Math.round(r.height),right:Math.round(r.right),bottom:Math.round(r.bottom)}})');
 check('three teleop clips play side by side inside the viewport', tele.length === 3 && tele.every((t) => !t.paused && t.right <= 1280 && t.bottom <= 720) && new Set(tele.map((t) => Math.round(t.bottom))).size === 1, JSON.stringify(tele));
+if (nDividers) {
+  await key('Home'); await sleep(300);
+  await ev('document.querySelector("#cover button.toc-section").click()'); await sleep(900);
+  check('the cover\'s section heading jumps to the chapter slide', /^section-/.test(await active()));
+  await ev('document.querySelector(".slide.is-active .toc-item").click()'); await sleep(900);
+  check('an entry on the chapter slide jumps to its slide', await ev('document.querySelector(".slide.is-active").classList.contains("slide-paper")'));
+}
 await ev('location.hash = "#/object-spin"'); await sleep(900);
 check('hash deep link selects the slide', (await active()) === 'object-spin');
 check('digit keys ignore out-of-range papers', (await key('9'), await sleep(200), await active()) === 'object-spin');
@@ -130,11 +151,11 @@ await ev('document.querySelector("#help-dialog [data-close-dialog]").click()'); 
 console.log('Images, bullets, status text');
 check('every gallery image is on its slide (beside the text or on the board)', await ev('window.PAPERS.every(p=>document.querySelectorAll("#"+p.id+" [data-gallery]").length===(p.gallery||[]).length)'));
 check('only images from the paper folders are used (assets/images)', await ev('[...document.querySelectorAll(".slide-paper [data-gallery] img")].every(i=>i.getAttribute("src").startsWith("assets/images/"))'));
-check('every paper slide shows at least one video (on the board or under the bullets)', await ev('[...document.querySelectorAll(".slide-paper")].every(s=>s.querySelectorAll("video").length>=1)'));
+check('every slide shows its media: a video / embed when the entry has one, otherwise at least an image (projects)', await ev('window.PAPERS.every(p=>{const s=document.getElementById(p.id); return p.media ? s.querySelectorAll("video, .vframe.is-embed").length>=1 : s.querySelectorAll("[data-gallery]").length>=1})'));
 check('text is condensed to 2-3 bullets, no TL;DR paragraph or key-number tiles', await ev('[...document.querySelectorAll(".slide-paper")].every(s=>{const n=s.querySelectorAll(".points li").length; return n>=2&&n<=3&&!s.querySelector(".tldr")&&!s.querySelector(".highlights")})'));
 check('no submission-status text anywhere in the deck', !/Under review|Accepted|Workshop paper|Presentation|double-blind|Submitted to/.test(await ev('document.getElementById("track").textContent')) && (await ev('document.querySelectorAll(".track [class*=status-]").length')) === 0);
 check('no conference names anywhere in the deck', !/IROS|ICRA|ICLR|ICIR|Advanced Robotics Research|Workshop|Wiley/.test(await ev('document.getElementById("track").textContent')) && (await ev('document.querySelectorAll(".track .badge.venue").length')) === 0);
-check('no venue or year badges remain on the slides', (await ev('document.querySelectorAll(".slide-paper .badge, #cover .badge, #end .badge").length')) === 0 && !/\b20(2[5-9])\b/.test(await ev('[...document.querySelectorAll(".slide-paper .badges, #cover .toc-list")].map(e=>e.textContent).join(" ")')));
+check('no venue, status or year badges remain on the slides (only section / organisation badges)', (await ev('document.querySelectorAll(".slide-paper .badge:not(.section):not(.org), #cover .badge, #end .badge").length')) === 0 && !/\b20(2[5-9])\b/.test(await ev('[...document.querySelectorAll(".slide-paper .badges, #cover .toc-list")].map(e=>e.textContent).join(" ")')));
 check('every paper slide puts the text band above a full-width board', await ev('window.PAPERS.every(p => { const s = document.getElementById(p.id); const t = s.querySelector(".paper-text").getBoundingClientRect(); const b = s.querySelector(".board").getBoundingClientRect(); const c = s.querySelector(".slide-content").getBoundingClientRect(); return t.bottom <= b.top + 1 && b.width >= c.width * .98 && b.height >= c.height * .55; })'));
 check('uniprototype: image on the left, video on the right', await ev('(() => { const im = document.querySelector("#uniprototype .board .cell-img").getBoundingClientRect(); const v = document.querySelector("#uniprototype .board .cell-video").getBoundingClientRect(); return im.right <= v.left + 1 && Math.abs(im.top - v.top) < 2; })()'));
 check('physgrasp: figure spans both rows on the left, clips stacked on the right', await ev('(() => { const im = document.querySelector("#physgrasp .board .cell-img").getBoundingClientRect(); const vs = [...document.querySelectorAll("#physgrasp .board .cell-video")].map(e => e.getBoundingClientRect()); return vs.length === 2 && vs.every(v => v.left > im.right) && vs[1].top > vs[0].bottom && im.height > vs[0].height * 1.8; })()'));
@@ -166,6 +187,23 @@ check('a clip\'s expand button opens it as a video in the lightbox', (await ev('
 await ev('document.querySelector("#fig-dialog [data-close-dialog]").click()'); await sleep(300);
 check('closing the lightbox stops and unloads its video', await ev('document.getElementById("fig-video").paused && !document.getElementById("fig-video").getAttribute("src")'));
 await ev(`location.hash = '#/${firstId}'`); await sleep(800);
+
+console.log('YouTube embeds');
+const embedId = await ev('(window.PAPERS.find(p => p.media && [p.media.main].concat(p.media.clips || []).some(v => v && v.kind === "youtube")) || {}).id || ""');
+if (!embedId) console.log('  (no YouTube embed in the deck)');
+else {
+  await ev(`location.hash = '#/${embedId}'`); await sleep(1200);
+  check('embed frames show a thumbnail and a play button, no iframe before the click', (await ev(`document.querySelectorAll("#${embedId} .vframe.is-embed").length`)) > 0 && (await ev(`document.querySelectorAll("#${embedId} iframe").length`)) === 0 && (await ev(`[...document.querySelectorAll("#${embedId} .vframe.is-embed img")].every(i => i.getAttribute("src"))`)));
+  check('embed frames fit their cells (16:9 player at least 320 px wide, inside the viewport)', await ev(`[...document.querySelectorAll("#${embedId} .vframe.is-embed")].every(f => { const r = f.getBoundingClientRect(); return Math.min(r.width, r.height * 16 / 9) >= 320 && r.right <= 1280 && r.bottom <= 720; })`));
+  await ev(`document.querySelector("#${embedId} .vframe.is-embed [data-expand]").click()`); await sleep(300);
+  check('the expand button opens the embed large in the lightbox', (await ev('document.getElementById("fig-dialog").open')) && !(await ev('document.getElementById("fig-embed").hidden')) && /youtube-nocookie/.test(await ev('document.getElementById("fig-embed").src')));
+  await ev('document.querySelector("#fig-dialog [data-close-dialog]").click()'); await sleep(200);
+  check('closing the lightbox unloads the embedded player', await ev('document.getElementById("fig-embed").hidden && !/youtube/.test(document.getElementById("fig-embed").src)'));
+  await ev(`document.querySelector("#${embedId} .vframe.is-embed [data-play]").click()`); await sleep(300);
+  check('clicking play creates the player iframe (youtube-nocookie, autoplay) and hides the thumbnail', await ev(`(() => { const f = document.querySelector("#${embedId} .vframe.is-embed iframe"); return !!f && /youtube-nocookie\\.com\\/embed\\/.+autoplay=1/.test(f.src) && getComputedStyle(f.parentElement.querySelector(".embed-poster")).display === "none"; })()`));
+  await key('ArrowLeft'); await sleep(1300);
+  check('leaving the slide removes the inline player', (await ev(`document.querySelectorAll("#${embedId} iframe").length`)) === 0);
+}
 
 console.log('Every slide fits a 1280x720 projector');
 const ids = await ev('[...document.querySelectorAll(".slide")].map(s=>s.id)');

@@ -44,6 +44,33 @@ Item keys inside `layout`: `img:N` is `gallery[N]`; `video:N` indexes `[media.ma
 under the bullets instead of on the board — unused today because the owner wants text first and
 media below, but available.
 
+## Project entries (`section: 'project'`)
+
+A project is a robot or system the owner took part in, usually described from a web page or press
+material instead of a PDF. It uses the same entry shape with these differences (see `xiaowu`):
+
+```js
+    section: 'project',                 // grouped under "Projects" on the cover and the closing slide; slide gets a "Project" badge
+    org: 'Tencent Robotics X',          // the organisation behind it — shown as a badge (not an author/affiliation line)
+    infoLabel: 'Details',               // the dialog button (default 'Abstract')
+    abstractLabel: 'About the project (compiled from …)',   // dialog headings
+    highlightsLabel: 'Specifications',  // highlights become the spec sheet: { value: '22 DoF', label: '…' }
+    links: { project: 'https://…', projectLabel: 'Robot profile', extra: [{ label: 'Lab site', href: 'https://…' }] },
+    bibtex: '',                         // no citation → no BibTeX button; no links.pdf → no PDF button
+    thumb: 'assets/images/<slug>-….jpg',   // cover thumbnail when there is no video poster
+```
+
+Videos from the web (e.g. the clips embedded on a profile page) are YouTube embeds, not files:
+`media.clips: [{ kind: 'youtube', id: 'UsixIrwb7So', label: 'Overview', w: 16, h: 9, duration: 58, caption: '…' }]`
+(get the duration with `yt-dlp --skip-download --dump-json <url>`; the thumbnail comes from i.ytimg.com).
+They take `video:N` cells like any clip; the player only loads when clicked, and only when the page is
+served over http(s) (from `file://` YouTube answers "error 153"; the frame then shows a note instead).
+Put the project after the papers in the array; `SITE.sections.project.divider` holds the copy of the
+"Projects" chapter slide that precedes it. Source images go into a folder like `xiaowu/` as usual
+(convert AVIF/WebP with alpha through Pillow, not ffmpeg, which drops the alpha plane); note their origin
+in a `SOURCE.md` there and mark third-party images / figures with `// TODO` so the owner can replace them
+with their own. No venue, year or status is rendered for a project either.
+
 ## Bullet style (`points`)
 
 One idea per bullet, ≤ ~95 characters, concrete, with a number where the paper gives one.
