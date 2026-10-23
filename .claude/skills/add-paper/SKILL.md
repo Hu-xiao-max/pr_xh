@@ -92,7 +92,12 @@ python3 tools/optimize_videos.py --js <slug> # ready-to-paste `media:` block (w/
 ```
 
 Compliant files are remuxed losslessly, others re-encoded (libx264, crf 26, ≤1280 px, +faststart);
-digitally silent audio is dropped. Decide `kind` per video: a narrated or long overview
+digitally silent audio is dropped. Per-video maps in the script: `SPEED` (e.g. `2.0` when the owner
+asks for a faster demo; audio is dropped), `CROP` (`"w:h:x:y"` in display pixels, to cut empty
+background) and `POSTER_AT`. Phone clips are often stored with non-square pixels (ffprobe
+`sample_aspect_ratio` ≠ 1:1, e.g. 480×480 with SAR 240:427 = a 480×854 portrait picture): the script
+rescales them to square pixels first, so look at frames **with** `scale=iw:ih/sar` (or `-vf
+"scale=iw*sar:ih"`) before choosing a crop, otherwise the picture looks squeezed and the crop is wrong. Decide `kind` per video: a narrated or long overview
 (≈ ≥ 60 s) is `main` (`kind: 'overview'`: native controls, never autoplays); short demos are
 `clips` (`kind: 'loop'`: muted autoplay while the slide is on screen). Replace the TODO labels
 (short, 1–3 words, shown on the video) and captions (one sentence, used as a tooltip). Keep
@@ -102,7 +107,9 @@ the same on a speech band (`-af "highpass=f=300,lowpass=f=3400,volumedetect"`) �
 most of its energy in the band and `silencedetect` shows pauses; motor hum does not. If the
 poster frame is a black or title card, set a better timestamp in `POSTER_AT` and run
 `--posters`. To judge a video's content quickly, tile a few frames with ffmpeg (build the
-filter string in Python, see Pitfalls) and look at the image with the Read tool.
+filter string in Python, see Pitfalls) and look at the image with the Read tool. A lone video on a
+board is centred at its own aspect ratio (`layout.board: { cols: 1, rows: 1 }`), so a single
+portrait clip does not need a dark full-width frame.
 
 The scripts rebuild `manifest.json` from the sources they find and merge in earlier entries whose
 outputs still exist, so running them with some raw sources missing (they are git-ignored) is

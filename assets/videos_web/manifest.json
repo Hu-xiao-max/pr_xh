@@ -8,7 +8,7 @@
     "duration": 57.8,
     "size_mb": 2.0,
     "audio": false,
-    "mode": "remux"
+    "mode": "reencode"
   },
   "physgrasp-v6": {
     "src": "Advance_wiley/v6 .mp4",
@@ -19,7 +19,18 @@
     "duration": 24.07,
     "size_mb": 1.59,
     "audio": true,
-    "mode": "remux"
+    "mode": "reencode"
+  },
+  "aloha-drawer-aloha": {
+    "src": "aloha_drawer/aloha.mp4",
+    "file": "assets/videos_web/aloha-drawer-aloha.mp4",
+    "poster": "assets/posters/aloha-drawer-aloha.jpg",
+    "width": 854,
+    "height": 322,
+    "duration": 68.8,
+    "size_mb": 2.51,
+    "audio": false,
+    "mode": "reencode"
   },
   "tactile-grasp-abb-manipulation": {
     "src": "icra25/abb_manipulation.mp4",
@@ -30,7 +41,7 @@
     "duration": 28.56,
     "size_mb": 2.17,
     "audio": true,
-    "mode": "remux"
+    "mode": "reencode"
   },
   "tactile-grasp-v5": {
     "src": "icra25/v5.mp4",
@@ -106,6 +117,17 @@
     "height": 480,
     "duration": 177.1,
     "size_mb": 7.74,
+    "audio": false,
+    "mode": "reencode"
+  },
+  "waste-sort-waste-grasp": {
+    "src": "waste_sort/waste_grasp.mp4",
+    "file": "assets/videos_web/waste-sort-waste-grasp.mp4",
+    "poster": "assets/posters/waste-sort-waste-grasp.jpg",
+    "width": 480,
+    "height": 552,
+    "duration": 18.97,
+    "size_mb": 0.33,
     "audio": false,
     "mode": "reencode"
   },

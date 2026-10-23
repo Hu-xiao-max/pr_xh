@@ -35,6 +35,8 @@ SLUGS = {            # folder -> slug (same as optimize_videos.py)
     "unfold": "cloth-unfold",
     "wrench_spin": "object-spin",
     "xiaowu": "xiaowu",
+    "waste_sort": "waste-sort",
+    "aloha_drawer": "aloha-drawer",
 }
 
 

@@ -406,6 +406,7 @@ dialog.lightbox { background: transparent; box-shadow: none; max-width: 96vw; wi
   }
   .cell { grid-column: span 2 !important; grid-row: auto !important; aspect-ratio: var(--ar, 1.78); }
   .cell.cell-tall { grid-column: span 1 !important; }
+  .board[data-items="1"] > .cell.cell-tall { grid-column: span 2 !important; }   /* a lone portrait item still gets the full width */
   .inline-wide, .text-video .vframe { width: 100%; }
   .toc-item .badge { display: none; }
   .toc-list.toc-two { grid-template-columns: 1fr; }
@@ -423,6 +424,9 @@ dialog.lightbox { background: transparent; box-shadow: none; max-width: 96vw; wi
 }
 @media (min-width: 961px) and (orientation: landscape) {
   .slide-stack .slide-inner { overflow: hidden; }       /* the stack grid is pinned to the slide height */
+  /* a lone video on the board takes its own aspect ratio and sits centred instead of stretching into a
+     full-width dark frame (a wide one is capped at the board width and letterboxed as before) */
+  .board[data-items="1"] > .cell-video { justify-self: center; height: 100%; max-width: 100%; aspect-ratio: var(--ar, 1.78); }
 }
 @media (max-height: 560px) and (orientation: landscape) {
   .paper-grid { align-items: start; }

@@ -60,7 +60,8 @@ check(`cover contents are grouped under ${nSections > 1 ? nSections : 'no'} sect
 check('closing list is grouped the same way', (await ev('document.querySelectorAll("#end .end-section").length')) === (nSections > 1 ? nSections : 0));
 check('section headings and contents entries follow the PAPERS order (first section first)', await ev('(() => { const els = [...document.querySelectorAll("#cover .toc-section, #cover .toc-item")]; let seen = -1; for (const e of els) { if (e.classList.contains("toc-item")) { const i = window.PAPERS.findIndex(p => p.id === e.dataset.goto); if (i < seen) return false; seen = i; } } return true; })()'));
 const projectIds = await ev('window.PAPERS.filter(p => p.section && p.section !== "research").map(p => p.id)');
-check(`project slides (${projectIds.join(', ') || 'none'}) show a section badge, no PDF / BibTeX buttons and a project link`, await ev('window.PAPERS.filter(p => p.section && p.section !== "research").every(p => { const s = document.getElementById(p.id); return s.querySelector(".badge.section") && !s.querySelector("[data-bibtex]") && !s.querySelector(".btn[href$=\'.pdf\']") && s.querySelector(".actions a.btn[href^=\'http\']"); })'));
+check(`project slides (${projectIds.join(', ') || 'none'}) show a section badge and a Details button, no PDF / BibTeX buttons`, await ev('window.PAPERS.filter(p => p.section && p.section !== "research").every(p => { const s = document.getElementById(p.id); return s.querySelector(".badge.section") && s.querySelector("[data-abstract]") && !s.querySelector("[data-bibtex]") && !s.querySelector(".btn[href$=\'.pdf\']"); })'));
+check('every project with a project link shows it as a button', await ev('window.PAPERS.filter(p => p.section && p.section !== "research" && p.links && p.links.project).every(p => document.querySelector("#" + p.id + " .actions a.btn[href=\'" + p.links.project + "\']"))'));
 check('research slides keep their Abstract and BibTeX buttons', await ev('window.PAPERS.filter(p => !p.section || p.section === "research").every(p => document.querySelector("#" + p.id + " [data-abstract]") && document.querySelector("#" + p.id + " [data-bibtex]"))'));
 check(`every section with a divider gets one chapter slide (${nDividers})`, nDividers === (await ev('Object.keys(window.SITE.sections || {}).filter(k => window.SITE.sections[k].divider && window.PAPERS.some(p => (p.section || Object.keys(window.SITE.sections)[0]) === k)).length')));
 check('a chapter slide sits right before the first slide of its section', await ev('[...document.querySelectorAll(".slide-section")].every(s => { const key = s.id.replace(/^section-/, ""); const next = s.nextElementSibling; return !!next && next.classList.contains("slide-paper") && (window.PAPERS.find(p => p.id === next.id) || {}).section === key; })'));
@@ -128,7 +129,8 @@ if (nDividers) {
 }
 await ev('location.hash = "#/object-spin"'); await sleep(900);
 check('hash deep link selects the slide', (await active()) === 'object-spin');
-check('digit keys ignore out-of-range papers', (await key('9'), await sleep(200), await active()) === 'object-spin');
+if (nPapers < 9) check('digit keys ignore out-of-range papers', (await key(String(nPapers + 1)), await sleep(200), await active()) === 'object-spin');
+else { await key('9'); await sleep(900); check('digit 9 jumps to the ninth entry', (await active()) === await ev('window.PAPERS[8].id')); await ev('location.hash = "#/object-spin"'); await sleep(900); }
 
 console.log('Dialogs');
 await key('a'); await sleep(300);
@@ -222,7 +224,7 @@ for (const sid of ['cover'].concat(await ev('window.PAPERS.map(p=>p.id)'), ['end
   check(`${sid}: nothing extends past the phone's right edge`, maxRight <= 391, String(maxRight));
 }
 check('phone: on every paper slide the text comes first, then the media', await ev('window.PAPERS.every(p => { const s = document.getElementById(p.id); const t = s.querySelector(".paper-text").getBoundingClientRect(); const b = s.querySelector(".board").getBoundingClientRect(); return t.bottom <= b.top + 1; })'));
-check('phone: board cells are full width (portrait clips paired) and keep their aspect ratio', await ev('window.PAPERS.every(p => [...document.querySelectorAll("#" + p.id + " .board .cell")].every(c => { const r = c.getBoundingClientRect(); const ar = parseFloat(c.style.getPropertyValue("--ar")); const full = r.width >= 340; const half = r.width >= 160 && r.width < 200; return (c.classList.contains("cell-tall") ? half : full) && Math.abs(r.width / r.height - ar) < 0.05; }))'));
+check('phone: board cells are full width (portrait clips paired, a lone one full width) and keep their aspect ratio', await ev('window.PAPERS.every(p => [...document.querySelectorAll("#" + p.id + " .board .cell")].every(c => { const r = c.getBoundingClientRect(); const ar = parseFloat(c.style.getPropertyValue("--ar")); const full = r.width >= 340; const half = r.width >= 160 && r.width < 200; const alone = c.parentElement.querySelectorAll(".cell").length === 1; return (c.classList.contains("cell-tall") && !alone ? half : full) && Math.abs(r.width / r.height - ar) < 0.05; }))'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (problems.length) { console.log('Runtime problems:'); problems.forEach((p) => console.log('  -', p)); }

@@ -563,7 +563,7 @@ window.PAPERS = [
   {
     id: 'xiaowu',
     section: 'project',
-    shortTitle: 'XiaoWu (The Five) — Wheel-Legged Home Robot',
+    shortTitle: 'XiaoWu (The Five)',
     navTitle: 'XiaoWu',
     title: 'XiaoWu (The Five): A Wheel-Legged Home Robot for Elderly Care',
     org: 'Tencent Robotics X',                  // shown as a badge next to the slide number
@@ -617,6 +617,97 @@ window.PAPERS = [
           kind: 'youtube', id: 'UsixIrwb7So',
           label: 'Overview', w: 16, h: 9, duration: 58,
           caption: '<b>Xiaowu, Tencent’s latest robotic marvel (0:58).</b> Walking, rolling and home-assistance scenes; the clip embedded on the humanoid-robots.io profile.',   // TODO: confirm what the clip shows
+        },
+      ],
+    },
+  },
+
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'waste-sort',
+    section: 'project',
+    shortTitle: 'Construction-Waste Sorting Cell',
+    navTitle: 'Waste Sorting',
+    title: 'Sorting Construction Waste with a Robot Arm over a Conveyor Belt',
+    // org: '',                               // TODO: organisation / lab behind the project (shown as a badge if set)
+    year: 2026,                               // data only — TODO: confirm
+    status: { key: 'project', label: 'Lab demonstration' },   // data only
+    topics: ['Pick-and-Place', 'Recycling', 'Real Robot'],
+    tags: ['Construction & demolition waste', 'Conveyor sorting', 'Robot arm', 'Pick-and-place', 'Recycling'],
+    // 2–3 bullet points shown on the slide
+    points: [
+      'A robot arm above a conveyor belt picks mixed construction debris off the moving stream',
+      'First pass: rubble and stone fragments are separated from everything else',
+      'Second pass: foam and plastic are picked out of the remainder for recycling',
+    ],
+    tldr: 'A two-stage pick-and-sort cell for construction and demolition waste: a robot arm above a conveyor belt first removes rubble and stone fragments from the mixed stream, then goes through what is left and picks out foam and plastic so they can be recycled.',
+    // TODO: throughput, pick success rate, item classes → highlights: [{ value: '…', label: '…' }]
+    infoLabel: 'Details',
+    abstractLabel: 'About the project',
+    abstract: 'Construction and demolition waste arrives as a mixed stream of rubble, stone fragments, foam, plastics and other debris, and most of it is still sorted by hand. This project builds a compact sorting cell in which a conveyor belt carries the mixture past a robot arm. Sorting proceeds in two stages: the arm first picks rubble and stone fragments out of the stream and drops them into their own bin; the remaining, lighter items then pass again and the arm picks out foam and plastic, which are collected separately for recycling. The demo video shows the arm picking items from the belt and placing them into the bins.',   // TODO: add perception / gripper details and numbers when available
+    links: { pdf: '', project: '', code: '' },   // TODO: project page or code link, if any
+    bibtex: '',                                   // a project has no citation → no BibTeX button
+    // no images yet — TODO: drop photos of the cell / the sorted bins into waste_sort/ (tools/optimize_images.py --js waste-sort)
+    gallery: [
+    ],
+    // Layout: text band on top; the (portrait-ish) demo clip alone on the board below, centred at its own aspect ratio.
+    // The clip is sped up 2× in the web copy; the slide does not say so (owner's request).
+    layout: { mode: 'stack', board: { cols: 1, rows: 1, cells: [{ item: 'video:0' }] } },
+    media: {
+      title: 'Demo',
+      clips: [
+        {
+          kind: 'loop',
+          label: 'Sorting demo',
+          src: 'assets/videos_web/waste-sort-waste-grasp.mp4',
+          poster: 'assets/posters/waste-sort-waste-grasp.jpg',
+          w: 480, h: 552, duration: 19,
+          caption: '<b>Sorting demo (0:19).</b> The arm picks debris off the conveyor and drops it into the bins: rubble and stone first, then foam and plastic from the remainder.',   // waste_sort/waste_grasp.mp4 (portrait phone clip): web copy plays at 2× (SPEED in tools/optimize_videos.py) — not mentioned on the page at the owner's request; cropped to the working area, audio dropped
+        },
+      ],
+    },
+  },
+
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'aloha-drawer',
+    section: 'project',
+    shortTitle: 'Single-Arm ALOHA: Bun into Drawer',
+    navTitle: 'ALOHA Drawer',
+    title: 'Single-Arm ALOHA Deployment: Putting a Bun into a Drawer from 40 Demonstrations',
+    // org: '',                               // TODO: organisation / lab behind the project (shown as a badge if set)
+    year: 2026,                               // data only — TODO: confirm
+    status: { key: 'project', label: 'Lab demonstration' },   // data only
+    topics: ['Imitation & Skill Transfer', 'Real Robot'],
+    tags: ['ALOHA', 'Imitation learning', 'Single arm', 'Two cameras', 'Drawer', '40 demonstrations'],
+    // 2–3 bullet points shown on the slide
+    points: [
+      'The ALOHA imitation-learning stack deployed on a single arm with two cameras',
+      'Policy trained from only 40 human demonstrations',
+      'Task: pick a bun off the table and put it into the open drawer',   // TODO: confirm the object (包子?) and whether the arm also opens / closes the drawer
+    ],
+    tldr: 'The ALOHA imitation-learning pipeline, built for a two-arm setup, deployed on a single robot arm with two cameras: a policy trained from 40 teleoperated demonstrations picks a bun off the table and places it into a drawer.',
+    // TODO: success rate, policy (ACT?), camera placement → highlights: [{ value: '…', label: '…' }]
+    infoLabel: 'Details',
+    abstractLabel: 'About the project',
+    abstract: 'ALOHA (A Low-cost Open-source Hardware System for Bimanual Teleoperation) pairs low-cost teleoperation with an imitation-learning policy trained on the collected demonstrations. This project ports that pipeline to a single arm observed by two cameras. Forty demonstrations of one task — picking a bun off the table and placing it into an open drawer — were collected by teleoperation and used to train the policy, which then runs autonomously on the arm. The video shows a deployment run from two angles side by side: a phone recording of the real scene (left) and the screen with the two camera streams the policy sees and its console output (right).',   // TODO: add the policy type (ACT?), camera placement and results when available
+    links: { pdf: '', project: '', code: '' },   // TODO: project page or code link, if any
+    bibtex: '',                                   // a project has no citation → no BibTeX button
+    // no images yet — TODO: drop photos of the setup into aloha_drawer/ (tools/optimize_images.py --js aloha-drawer)
+    gallery: [
+    ],
+    // Layout: text band on top; the wide composite clip alone on the board below.
+    layout: { mode: 'stack', board: { cols: 1, rows: 1, cells: [{ item: 'video:0' }] } },
+    media: {
+      title: 'Demo',
+      clips: [
+        {
+          kind: 'loop',
+          label: 'Deployment run',
+          src: 'assets/videos_web/aloha-drawer-aloha.mp4',
+          poster: 'assets/posters/aloha-drawer-aloha.jpg',
+          w: 854, h: 322, duration: 69,
+          caption: '<b>Deployment run (1:09).</b> Left: phone view of the arm picking the bun and placing it into the drawer. Right: the two camera streams the policy sees, with the console.',   // aloha_drawer/aloha.mp4, bottom caption band cropped off (the burned-in "1X" marks remain), silent track dropped
         },
       ],
     },

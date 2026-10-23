@@ -5,7 +5,8 @@ A static, build-free presentation page: cover (opening text + clickable table of
 the closing list are grouped into sections (**Research** / **Projects**, `SITE.sections` + `section` on each
 entry); a section with `divider` gets its chapter slide (title, intro and its own contents), project slides
 carry a small "Project" badge and the organisation's name, and have Details / link buttons instead of
-PDF / BibTeX. Open it in a browser, press **F** for fullscreen and present
+PDF / BibTeX. A project can be a web-described robot (XiaoWu) or a demo video of the owner's own
+(the construction-waste sorting cell). Open it in a browser, press **F** for fullscreen and present
 with the buttons at the bottom, a clicker or the keyboard (wheel and swipe navigation are off by
 default so that scrubbing a video never changes the slide; `SITE.navigation` in papers.js turns
 them on or the keyboard off). Each paper slide is mostly visual: a text band on top (title, 2–3 bullets, buttons for
@@ -95,6 +96,10 @@ desktop and phone sizes, and reports the TODOs to confirm. The manual steps are 
    use `--force` to redo them, `--dry-run` to only print the plan, `--posters` to only
    re-create poster frames (per-video timestamps live in `POSTER_AT`), and `--js <slug>` to print
    a ready-to-paste `media:` block. `tools/optimize_images.py --js <slug>` does the same for `gallery`.
+   Two more per-video maps in the script: `SPEED` plays a slow demo faster (e.g. `2.0`; the audio is
+   dropped) and `CROP` cuts away empty background (`"w:h:x:y"` in display pixels). Phone clips stored
+   with non-square pixels are rescaled to square pixels first, so crops and the page's `w`/`h` always
+   refer to what is shown.
 3. Add an entry to `assets/data/papers.js` — array order = slide order.
    `assets/videos_web/manifest.json` lists the exact `w`/`h`/`duration` values to copy.
    - `media.main` → long/narrated video, shown large with native controls.

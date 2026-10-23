@@ -14,6 +14,14 @@ ffprobe and then either
 It also writes a poster JPEG per video so the page can show a frame before any
 video bytes are fetched, and a manifest.json with the resulting metadata.
 
+Per-video tweaks live in the maps below: POSTER_AT (poster frame time), SPEED
+(play-back speed-up, e.g. 2.0 for a slow demo; the audio track is dropped) and
+CROP (ffmpeg crop "w:h:x:y" to cut away empty background, in *display* pixels).
+Either of the last two forces a re-encode, as does a non-square pixel aspect ratio
+(some phone clips are stored squeezed, e.g. 480x480 with SAR 240:427 = a 480x854
+portrait picture): those are rescaled to square pixels first so that crops, posters
+and the page's w/h all refer to what is actually shown.
+
 Usage:
     python3 tools/optimize_videos.py            # convert what is missing
     python3 tools/optimize_videos.py --force    # redo everything
@@ -48,6 +56,19 @@ SLUGS = {
     "unfold": "cloth-unfold",
     "wrench_spin": "object-spin",
     "xiaowu": "xiaowu",
+    "waste_sort": "waste-sort",
+    "aloha_drawer": "aloha-drawer",
+}
+
+# play-back speed-up per output name (1.0 = unchanged); the audio track is dropped when sped up
+SPEED = {
+    "waste-sort-waste-grasp": 2.0,
+}
+
+# crop per output name, ffmpeg "w:h:x:y" in display pixels (after the pixel-aspect fix, before scaling)
+CROP = {
+    "waste-sort-waste-grasp": "480:552:0:300",   # portrait phone clip (480x854 shown): drop the empty wall above the arm
+    "aloha-drawer-aloha": "854:322:0:0",         # composite (854x480 shown): cut the caption band and the burned-in captions at the bottom
 }
 
 # poster frame time (s) per output name; others use 1.0 s (0.2 s for clips < 10 s)
@@ -57,6 +78,8 @@ POSTER_AT = {
     "pixelpoint-rl-icra27": 60,
     "cloth-unfold-corlv7": 90,
     "object-spin-icra27-6150-vi-i": 128,
+    "waste-sort-waste-grasp": 3.2,       # gripper down on the belt
+    "aloha-drawer-aloha": 24,            # arm at the drawer
 }
 
 MAX_SIDE = 1280          # px, applies to width AND height (vertical phone clips)
@@ -87,7 +110,20 @@ def probe(path: Path) -> dict:
             rot = int(abs(float(sd["rotation"])))
     if rot in (90, 270):
         w, h = h, w
+    # non-square pixels (sample aspect ratio): the picture is shown stretched to w*sar x h
+    sar = v.get("sample_aspect_ratio", "1:1")
+    try:
+        num, den = (int(x) for x in sar.split(":"))
+        sar_f = num / den if num and den else 1.0
+    except ValueError:
+        sar_f = 1.0
+    # square-pixel size that shows the same picture: upscale the short side so no detail is dropped
+    if abs(sar_f - 1.0) > 1e-3:
+        sq = (w, int(round(h / sar_f / 2)) * 2) if sar_f < 1 else (int(round(w * sar_f / 2)) * 2, h)
+    else:
+        sq = None
     return {
+        "sar": sar if sq else None, "square": sq,
         "codec": v.get("codec_name"),
         "pix_fmt": v.get("pix_fmt"),
         "width": w, "height": h,
@@ -151,9 +187,17 @@ def plan(src: Path) -> dict:
     slug = SLUGS.get(folder, clean_stem(folder))
     name = f"{slug}-{clean_stem(src.stem)}"
     fast = is_faststart(src)
+    speed = float(SPEED.get(name, 1.0))
+    crop = CROP.get(name)
     vol = max_volume_db(src) if meta["has_audio"] else None
-    keep_audio = meta["has_audio"] and vol is not None and vol > SILENT_DB
+    keep_audio = meta["has_audio"] and vol is not None and vol > SILENT_DB and speed == 1.0   # a sped-up track is useless
     reasons = []
+    if meta["sar"]:
+        reasons.append(f"pixel aspect {meta['sar']} -> {meta['square'][0]}x{meta['square'][1]}")
+    if speed != 1.0:
+        reasons.append(f"{speed:g}x speed")
+    if crop:
+        reasons.append(f"crop {crop}")
     if meta["codec"] != "h264":
         reasons.append(f"codec {meta['codec']}")
     if meta["pix_fmt"] != "yuv420p":
@@ -167,6 +211,7 @@ def plan(src: Path) -> dict:
         "src": src, "name": name, "dst": OUT_DIR / f"{name}.mp4",
         "poster": POSTER_DIR / f"{name}.jpg", "meta": meta,
         "faststart": fast, "max_volume": vol, "keep_audio": keep_audio,
+        "speed": speed, "crop": crop,
         "mode": mode, "reasons": reasons,
     }
 
@@ -177,9 +222,15 @@ def ffmpeg_cmd(p: dict) -> list[str]:
     if p["keep_audio"]:
         cmd += ["-map", "0:a:0"]
     if p["mode"] == "reencode":
-        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", CRF, "-preset", PRESET,
-                "-vf", (f"scale=w='min({MAX_SIDE},iw)':h='min({MAX_SIDE},ih)':"
-                        "force_original_aspect_ratio=decrease:force_divisible_by=2")]
+        vf = []
+        if p["meta"].get("square"):
+            vf.append(f"scale={p['meta']['square'][0]}:{p['meta']['square'][1]},setsar=1")   # square pixels first (see module docstring)
+        if p.get("crop"):
+            vf.append(f"crop={p['crop']}")
+        if p.get("speed", 1.0) != 1.0:
+            vf.append(f"setpts=PTS/{p['speed']:g}")
+        vf.append(f"scale=w='min({MAX_SIDE},iw)':h='min({MAX_SIDE},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2")
+        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", CRF, "-preset", PRESET, "-vf", ",".join(vf)]
         cmd += ["-c:a", "aac", "-b:a", "96k"] if p["keep_audio"] else ["-an"]
     else:  # lossless remux: just move moov to the front
         cmd += ["-c", "copy"] + ([] if p["keep_audio"] else ["-an"])
